@@ -6,7 +6,6 @@ import { Enemy } from "../entities/Enemy";
 import { Boss } from "../entities/Boss";
 import { Player } from "../entities/Player";
 import { Bullet } from '../entities/Bullet';
-import { DeathFX } from "../effects/DeathFX";
 import { SoundManager } from "../audio/SoundManager";
 
 export class MainScene extends Phaser.Scene {
@@ -17,6 +16,7 @@ export class MainScene extends Phaser.Scene {
   private friendlies!: Phaser.Physics.Arcade.Group;
   private enemies!:    Phaser.Physics.Arcade.Group;
   private rocks!:      Phaser.Physics.Arcade.StaticGroup;
+  private bgm?: Phaser.Sound.BaseSound;
 
   private words_rock = [
     "rock","stone","hill","cliff","sand","dust","mud","cave","valley","island",
@@ -92,6 +92,7 @@ export class MainScene extends Phaser.Scene {
     // audio
     const bgm = this.sound.add("bgm_main", { loop: true, volume: 0.4 });
     bgm.play();
+    
 
     // ground
     this.cameras.main.setBackgroundColor(0x66CDAA);
@@ -108,6 +109,12 @@ export class MainScene extends Phaser.Scene {
       this.Y_PLAYER,
       "you",
       5);
+
+    // プレイヤー生成後、destroyを一度だけ監視
+    this.player.once(Phaser.GameObjects.Events.DESTROY, () => {
+      this.triggerGameResults("defeated");
+    });
+
     this.friendlies.add(this.player);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -515,4 +522,29 @@ export class MainScene extends Phaser.Scene {
     });
 
   }
+
+  // メソッド追加
+  private triggerGameResults(reason: "defeated" | "timeout" | "fell") {
+    // 多重呼び出し防止
+    if ((this as any).__GameResultsFired) return;
+    (this as any).__GameResultsFired = true;
+
+    // 入力・物理停止／BGM停止
+    this.input.keyboard?.enabled && (this.input.keyboard.enabled = false);
+    this.physics.world.isPaused || this.physics.pause();
+    this.bgm?.stop();
+
+    // 画面フェードしてから遷移
+    const startAt = this.time.now;
+    this.cameras.main.fade(400, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.start("GameResultsScene", {
+        reason,
+        // 必要ならスコアや経過時間などを詰める
+        timeMs: this.time.now - startAt,
+        score: (this as any).score ?? 0,
+      });
+    });
+  }
+  
 }
