@@ -12,7 +12,7 @@ export class DeathFX {
         case "boss":   return "se_boss_die";
         case "enemy":  return "se_enemy_die";
         case "bullet_timeout": return "se_bullet_timeout";
-        case "bullet_collision": return "se_bullet_collision"; // ←追加
+        case "bullet_collision": return "se_bullet_collision";
     }
   }
 
