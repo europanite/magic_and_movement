@@ -62,7 +62,7 @@ export class MainScene extends Phaser.Scene {
   private dir = { forward:false, back:false, left:false, right:false };
   private W = 1200;
   private H = 900;
-  private Max_H = 4800;
+  private Max_H = 900;
   private X_PLAYER = this.W/2;
   private Y_PLAYER = this.Max_H - this.H/2;
 
@@ -163,7 +163,6 @@ export class MainScene extends Phaser.Scene {
       const e = new Enemy(this, randX, randY, this.getUniqueWord(this.words_enemy));
       this.enemies.add(e);
     }
-
     // === Enemy Attack ===
     this.time.addEvent({
       delay: 2000,
@@ -256,13 +255,16 @@ export class MainScene extends Phaser.Scene {
 
       if (!canSee) return;
 
-        // 複数弾を放つ（扇状）
-        const numBullets = 6;
-        const baseDeg = Phaser.Math.RadToDeg(Phaser.Math.Angle.Between(this.boss.x, this.boss.y, this.player.x, this.player.y));
-        for (let i = 0; i < numBullets; i++) {
-          const a = baseDeg - 30 + (60 * i) / 5; // -30°〜+30°を6発
-          this.spawnBullet(this.boss.x, this.boss.y, a, 300, 8, 2500, 300);
-        }
+        const angle = Phaser.Math.RadToDeg(
+                Phaser.Math.Angle.Between(this.boss.x, this.boss.y,  this.player.x,  this.player.y)
+        );
+        this.boss.shootSpread(angle, 5, 30, {
+                speed: 400,
+                radius: 8,
+                lifespanMs: 1000,
+                armDelayMs: 300,
+        });
+        this.boss.setWeapon({ armDelayMs: 2500 }); // 0.5秒で武装完了
       },
     });
 
@@ -277,17 +279,43 @@ export class MainScene extends Phaser.Scene {
     });
 
     // 5) Bullet × Bullet
-    this.physics.add.collider(this.bullets, this.bullets, (aGO, bGO) => {
-      const a = aGO as Bullet, b = bGO as Bullet;
-      if (!a.active || !b.active) return;
-      // どちらかが未武装なら相殺しない
-      if (!a.isArmed() && !b.isArmed()) return;
+    this.physics.add.collider(
+      this.bullets,
+      this.bullets,
+      // onCollide: 相殺（両方消す）
+      (aGO, bGO) => {
+        const a = aGO as Bullet;
+        const b = bGO as Bullet;
+        // 片方が既に死んでいたら二重処理を避ける
+        if (!a.active || !b.active) return;
+        a.takeDamage?.(1);
+        b.takeDamage?.(1);
+      },
+      // process: 衝突させるかどうか判定
+      (aGO, bGO) => {
+        const a = aGO as Bullet;
+        const b = bGO as Bullet;
 
-      DeathFX.playSE(this, DeathFX.seKey("bullet_collision"), 0, 0.6);
+        // 無効・非表示はスキップ
+        if (!a.active || !b.active || !a.visible || !b.visible) return false;
 
-      a.takeDamage(1);
-      b.takeDamage(1);
-    });
+        // どちらか非武装なら衝突させない（初期重なり対策）
+        if (!a.isArmed?.() || !b.isArmed?.()) return false;
+
+        // 同一 owner (同じシューター) の弾同士は衝突させない
+        const ao = a.getOwner?.();
+        const bo = b.getOwner?.();
+        if (ao && bo && ao === bo) return false;
+
+        // 同一 faction の弾同士も衝突させない（例: "enemy" vs "enemy"）
+        const af = a.getData?.("faction");
+        const bf = b.getData?.("faction");
+        if (af && bf && af === bf) return false;
+
+        // ここまで来たら敵味方の弾。相殺させる
+        return true;
+      }
+    );
 
     // Enemy Collision
     this.physics.add.overlap(this.bullets, this.enemies, (bGO, eGO) => {
@@ -459,7 +487,7 @@ export class MainScene extends Phaser.Scene {
     return pool.splice(i, 1)[0];
   }
 
-  private spawnBullet(
+  public spawnBullet(
     x: number, y: number,
     angleDeg: number,
     speed = 500,
@@ -486,14 +514,5 @@ export class MainScene extends Phaser.Scene {
       }
     });
 
-    // const asr = createASR("en-US");
-    // if (asr.supported) {
-    //   asr.start((text, isFinal) => {
-    //     if (isFinal && this.player.isAutoMoving()) {
-    //       logger.info(`ASR interrupt: "${text}"`);
-    //       this.player.interruptAutoMove();
-    //     }
-    //   });
-    // }
   }
 }
