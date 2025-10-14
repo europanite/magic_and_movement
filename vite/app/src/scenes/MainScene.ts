@@ -60,9 +60,11 @@ export class MainScene extends Phaser.Scene {
 
   // input
   private dir = { forward:false, back:false, left:false, right:false };
-  private  W = 1200;
-  private  H = 900;
-  private  Max_H = 4800;
+  private W = 1200;
+  private H = 900;
+  private Max_H = 4800;
+  private X_PLAYER = this.W/2;
+  private Y_PLAYER = this.Max_H - this.H/2;
 
   constructor(){
     super("MainScene");
@@ -93,8 +95,6 @@ export class MainScene extends Phaser.Scene {
 
     // ground
     this.cameras.main.setBackgroundColor(0x66CDAA);
-    this.add.rectangle(this.W/2, this.H/2, this.W, this.H, 0x66CDAA);
-    this.land = this.physics.add.staticGroup();
 
     // boundary & camera
     this.cameras.main.setBounds(0, 0, this.W, this.Max_H);
@@ -102,7 +102,12 @@ export class MainScene extends Phaser.Scene {
 
     // Player
     this.friendlies = this.physics.add.group({ classType: Player, runChildUpdate: true });
-    this.player = new Player(this, this.W/2, this.Max_H - this.H/2, "you", 5);
+    this.player = new Player(
+      this, 
+      this.X_PLAYER,
+      this.Y_PLAYER,
+      "you",
+      5);
     this.friendlies.add(this.player);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -263,9 +268,9 @@ export class MainScene extends Phaser.Scene {
 
     // Collision
     // Dynamic × Static
-    this.physics.add.collider(this.friendlies,  this.rocks);   // プレイヤーは岩で止まる
-    this.physics.add.collider(this.enemies, this.rocks);   // 敵も岩で止まる
-
+    this.physics.add.collider(this.friendlies,  this.rocks); 
+    this.physics.add.collider(this.enemies, this.rocks);
+    
     // 4) 弾 × 岩（現状維持：弾だけ消える＝岩は不死）
     this.physics.add.collider(this.bullets, this.rocks, (bGO) => {
       (bGO as Bullet).takeDamage(1);
@@ -278,7 +283,6 @@ export class MainScene extends Phaser.Scene {
       // どちらかが未武装なら相殺しない
       if (!a.isArmed() && !b.isArmed()) return;
 
-      // 死亡前に効果音（種類：bullet_collision）
       DeathFX.playSE(this, DeathFX.seKey("bullet_collision"), 0, 0.6);
 
       a.takeDamage(1);
@@ -303,7 +307,6 @@ export class MainScene extends Phaser.Scene {
       b.takeDamage(1);
     });
 
-    // Mic
     this.setupMic();
 
     this.registerInterruptHandlers();
@@ -336,17 +339,6 @@ export class MainScene extends Phaser.Scene {
         friendly.setFrame(idleFrame);
       }
     }
-
-    const view = this.cameras.main.worldView;
-    const body = this.player.body as Phaser.Physics.Arcade.Body;
-
-    // 体の半分を余白として考慮（はみ出し防止のため）
-    const halfW = body?.width ? body.width * 0.5 : 16;
-    const halfH = body?.height ? body.height * 0.5 : 16;
-
-    // 画面（カメラの可視領域）内にハードに拘束
-    this.player.x = Phaser.Math.Clamp(this.player.x, view.left + halfW,  view.right  - halfW);
-    this.player.y = Phaser.Math.Clamp(this.player.y, view.top  + halfH,  view.bottom - halfH);
 
   }
 
@@ -430,9 +422,8 @@ export class MainScene extends Phaser.Scene {
 
   }
 
-  // === LoS / FOV / Range 判定 ===
+  // === LoS / FOV / Range ===
   private hasLineOfSight(ax: number, ay: number, bx: number, by: number): boolean {
-    // 岩に遮られていないか判定
     const ray = new Phaser.Geom.Line(ax, ay, bx, by);
     let blocked = false;
     this.rocks.children.iterate((go: Phaser.GameObjects.GameObject) => {
@@ -468,16 +459,6 @@ export class MainScene extends Phaser.Scene {
     return pool.splice(i, 1)[0];
   }
 
-  private onArrived(r: Phaser.GameObjects.Rectangle) {
-    this.player.setVelocity(0);
-    // 念のため移動入力をクリア
-    this.dir.forward = this.dir.back = this.dir.left = this.dir.right = false;
-
-    const arrivedName = r.getData("name") || "rock";
-    logger.info(`Arrived: touched target "${arrivedName}"`);
-    this.navTargetRock = null;
-  }
-
   private spawnBullet(
     x: number, y: number,
     angleDeg: number,
@@ -499,22 +480,20 @@ export class MainScene extends Phaser.Scene {
   }
 
   private registerInterruptHandlers() {
-    // キー入力による割り込み
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
       if (this.player.isAutoMoving()) {
         this.player.interruptAutoMove();
       }
     });
 
-    // 音声認識による割り込み
-    const asr = createASR("en-US");
-    if (asr.supported) {
-      asr.start((text, isFinal) => {
-        if (isFinal && this.player.isAutoMoving()) {
-          logger.info(`ASR interrupt: "${text}"`);
-          this.player.interruptAutoMove();
-        }
-      });
-    }
+    // const asr = createASR("en-US");
+    // if (asr.supported) {
+    //   asr.start((text, isFinal) => {
+    //     if (isFinal && this.player.isAutoMoving()) {
+    //       logger.info(`ASR interrupt: "${text}"`);
+    //       this.player.interruptAutoMove();
+    //     }
+    //   });
+    // }
   }
 }

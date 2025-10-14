@@ -7,6 +7,5 @@ export class Boss extends CharacterBase {
       sounds: { death: "se_boss_die" },
     });
     this.setData("kind", "boss");
-    this.setScale(2);
   }
 }

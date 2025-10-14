@@ -11,6 +11,7 @@ export class Player extends CharacterBase {
   private moveSpeed = 180;
   private facing: "right" | "left" | "forward" | "back" = "forward";
   private interrupted = false;
+  private clampEnabled = false;
 
 constructor(scene: Phaser.Scene, x: number, y: number, name = "you", maxHp = 5) {
   super(scene, x, y, "player", 0, name, maxHp, {
@@ -96,6 +97,17 @@ constructor(scene: Phaser.Scene, x: number, y: number, name = "you", maxHp = 5) 
       // 自動移動していないときは通常の衝突（岩で止まる）に戻す
       if (body.checkCollision.none !== false) body.checkCollision.none = false;
     }
+
+    // カメラが自分を映すようになったらクランプON
+    const cam = this.scene.cameras.main;
+    if (!this.clampEnabled) {
+      if (cam.worldView.contains(this.x, this.y)) {
+        this.clampEnabled = true;
+      }
+      return; // それまでは押し戻さない
+    }
+
+    this.keepInsideCameraView();
   }
 
   /** 自動移動の明示停止API（停止時に衝突判定も元に戻す） */
@@ -116,4 +128,33 @@ constructor(scene: Phaser.Scene, x: number, y: number, name = "you", maxHp = 5) 
       this.interrupted = true;
     }
   }
+
+  // Player.ts の class Player 内に追加
+  private keepInsideCameraView() {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    if (!body) return;
+
+    const cam = this.scene.cameras.main;
+    // いま画面に映っているワールド領域（スクロール込み）
+    const view = cam.worldView;
+
+    // ヒットボックスの“半分”で余白（はみ出しを防ぐ）
+    const halfW = body.width  * 0.5;
+    const halfH = body.height * 0.5;
+
+    // クランプ先（左/右/上/下）
+    const minX = view.left  + halfW;
+    const maxX = view.right - halfW;
+    const minY = view.top   + halfH;
+    const maxY = view.bottom- halfH;
+
+    // 実際に押し戻す
+    this.x = Phaser.Math.Clamp(this.x, minX, maxX);
+    this.y = Phaser.Math.Clamp(this.y, minY, maxY);
+
+    // 位置を直接いじったので、物理Bodyも同期
+    body.position.x = this.x - halfW;
+    body.position.y = this.y - halfH;
+  }
+
 }
