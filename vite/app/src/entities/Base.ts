@@ -15,7 +15,6 @@ export class Base extends Phaser.Physics.Arcade.Sprite {
   protected maxHp = 1;
   protected hp = 1;
   protected nameTag?: Phaser.GameObjects.Text;
-  protected hitboxGfx?: Phaser.GameObjects.Graphics;
   protected opts: Required<BaseOptions>;
 
   constructor(
@@ -65,7 +64,6 @@ export class Base extends Phaser.Physics.Arcade.Sprite {
       .setDepth(this.opts.labelDepth);
     }
 
-    this.hitboxGfx = scene.add.graphics().setDepth(10000);
   }
 
   protected syncHitboxToDisplay() {
@@ -113,7 +111,6 @@ export class Base extends Phaser.Physics.Arcade.Sprite {
     this.setData("__dying", true);
 
     this.nameTag?.destroy();
-    this.hitboxGfx?.destroy();
 
     const kind = (this.getData("kind") as "player"|"enemy"|"boss") ?? "enemy";
 
@@ -137,13 +134,6 @@ export class Base extends Phaser.Physics.Arcade.Sprite {
 
     if (this.nameTag && this.active) {
       this.nameTag.setPosition(this.x, this.y - this.displayHeight * 0.5 - 8);
-    }
-
-    if (this.hitboxGfx && Base.DEBUG_HITBOXES && this.opts.drawHitbox) {
-      const body = this.body as Phaser.Physics.Arcade.Body;
-      this.hitboxGfx.clear();
-      this.hitboxGfx.lineStyle(1, 0x00ff00, 0.9);
-      this.hitboxGfx.strokeRect(body.x, body.y, body.width, body.height);
     }
   }
 }

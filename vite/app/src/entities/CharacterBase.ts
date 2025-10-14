@@ -154,7 +154,6 @@ export class CharacterBase extends Base {
     this.setData("__dying", true);
 
     this.nameTag?.destroy();
-    this.hitboxGfx?.destroy();
 
     const kind = (this.getData("kind") as "player" | "enemy" | "boss") ?? "enemy";
 

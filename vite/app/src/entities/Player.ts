@@ -10,13 +10,15 @@ export class Player extends CharacterBase {
   private targetRock: Phaser.GameObjects.Rectangle | null = null;
   private moveSpeed = 180;
   private facing: "right" | "left" | "forward" | "back" = "forward";
+  private interrupted = false;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, name = "you", maxHp = 5) {
-    super(scene, x, y, "player", 0, name, maxHp, {
-      sounds: { death: "se_player_die" },
-    });
-    this.setData("kind", "player");
-  }
+constructor(scene: Phaser.Scene, x: number, y: number, name = "you", maxHp = 5) {
+  super(scene, x, y, "player", 0, name, maxHp, {
+    sounds: { death: "se_player_die" },
+    collideWorldBounds: true, // ←★追加！
+  });
+  this.setData("kind", "player");
+}
 
   /**
    * 岩の名前を呼んだときに MainScene から呼ばれる想定のAPI
@@ -52,11 +54,15 @@ export class Player extends CharacterBase {
    */
   preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
+    // --- 割り込みがあったら、このフレームは何もせず終了 ---
+    if (this.interrupted) {
+      this.interrupted = false; // ←★ ここで即リセット
+      return;
+    }
+
     const body = this.body as Phaser.Physics.Arcade.Body;
 
     if (this.moveTarget) {
-      // ---- ① 他岩を素通りするため衝突判定OFF ----
-      if (body.checkCollision.none !== true) body.checkCollision.none = true;
 
       const dx = this.moveTarget.x - this.x;
       const dy = this.moveTarget.y - this.y;
@@ -101,5 +107,13 @@ export class Player extends CharacterBase {
     }
     this.moveTarget = null;
     this.targetRock = null;
+  }
+
+  public interruptAutoMove() {
+    if (this.isAutoMoving()) {
+      logger.info("Auto-move interrupted by user input.");
+      this.stopAutoMove();
+      this.interrupted = true;
+    }
   }
 }

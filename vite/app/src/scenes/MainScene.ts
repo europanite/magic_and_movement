@@ -17,7 +17,6 @@ export class MainScene extends Phaser.Scene {
   private friendlies!: Phaser.Physics.Arcade.Group;
   private enemies!:    Phaser.Physics.Arcade.Group;
   private rocks!:      Phaser.Physics.Arcade.StaticGroup;
-  private navTargetRock: Phaser.GameObjects.Rectangle | null = null;
 
   private words_rock = [
     "rock","stone","hill","cliff","sand","dust","mud","cave","valley","island",
@@ -27,7 +26,7 @@ export class MainScene extends Phaser.Scene {
     "shadow","light","sun","moon","star","sky","dawn","night","day","twilight",
     "earth","soil","field","plain","plate","ridge","path","trail","step","road",
     "wall","gate","bridge","pillar","arch","ring","circle","cube","crystal","gem",
-    "iron","silver","gold","metal","ore","coal","salt","clay","brick","dusty",
+    "iron","silver","gold","metal","orange","coal","salt","clay","brick","dusty",
     "silent","still","calm","cold","hard","solid","heavy","quiet","deep","rough",
     "wild","lonely","ancient","broken","gray","brown","smooth","soft","sharp","flat"
     ]
@@ -306,6 +305,8 @@ export class MainScene extends Phaser.Scene {
 
     // Mic
     this.setupMic();
+
+    this.registerInterruptHandlers();
   }
 
   update() {
@@ -335,6 +336,18 @@ export class MainScene extends Phaser.Scene {
         friendly.setFrame(idleFrame);
       }
     }
+
+    const view = this.cameras.main.worldView;
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+
+    // 体の半分を余白として考慮（はみ出し防止のため）
+    const halfW = body?.width ? body.width * 0.5 : 16;
+    const halfH = body?.height ? body.height * 0.5 : 16;
+
+    // 画面（カメラの可視領域）内にハードに拘束
+    this.player.x = Phaser.Math.Clamp(this.player.x, view.left + halfW,  view.right  - halfW);
+    this.player.y = Phaser.Math.Clamp(this.player.y, view.top  + halfH,  view.bottom - halfH);
+
   }
 
   // ==== ユーティリティ: 歩行アニメを作る ====
@@ -483,5 +496,25 @@ export class MainScene extends Phaser.Scene {
     body.reset(x, y);
     b.fire(angleDeg, speed);
     return b;
+  }
+
+  private registerInterruptHandlers() {
+    // キー入力による割り込み
+    this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
+      if (this.player.isAutoMoving()) {
+        this.player.interruptAutoMove();
+      }
+    });
+
+    // 音声認識による割り込み
+    const asr = createASR("en-US");
+    if (asr.supported) {
+      asr.start((text, isFinal) => {
+        if (isFinal && this.player.isAutoMoving()) {
+          logger.info(`ASR interrupt: "${text}"`);
+          this.player.interruptAutoMove();
+        }
+      });
+    }
   }
 }

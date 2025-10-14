@@ -2,8 +2,6 @@ import Phaser from "phaser";
 
 export class Rock extends Phaser.GameObjects.Rectangle {
   nameTag: Phaser.GameObjects.Text;
-  // 追加: ヒットボックス描画用
-  private hitboxGfx: Phaser.GameObjects.Graphics;
 
   constructor(scene: Phaser.Scene, x: number, y: number, w: number, h: number, name: string) {
     super(scene, x, y, w, h, 0x5b4b3a);
@@ -25,23 +23,5 @@ export class Rock extends Phaser.GameObjects.Rectangle {
       stroke: "#000",
       strokeThickness: 3,
     });
-
-    // === ヒットボックス可視化 ===
-    this.hitboxGfx = scene.add.graphics().setDepth(10_000);
-    const redraw = () => {
-      const b = this.body as Phaser.Physics.Arcade.StaticBody;
-      this.hitboxGfx.clear();
-      this.hitboxGfx.lineStyle(1, 0x00ff00, 0.9);
-      this.hitboxGfx.strokeRect(b.x, b.y, b.width, b.height);
-    };
-    scene.events.on("postupdate", redraw);
-    this.once(Phaser.GameObjects.Events.DESTROY, () => {
-      scene.events.off("postupdate", redraw);
-      this.hitboxGfx.destroy();
-      this.nameTag.destroy();
-    });
-
-    // 初回描画
-    redraw();
   }
 }
