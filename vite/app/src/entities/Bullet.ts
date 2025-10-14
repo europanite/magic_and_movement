@@ -1,7 +1,8 @@
 // app/src/entities/Bullet.ts
 import Phaser from "phaser";
-import { BaseCharacter } from "./BaseCharacter";
+import { Base } from "./Base";
 import { logger } from "../logger";
+import { SoundManager } from "../audio/SoundManager";
 
 export interface BulletOptions {
   speed: number;
@@ -10,7 +11,7 @@ export interface BulletOptions {
   armDelayMs: number;   // ← 追加：時限信管（アーム遅延）
 }
 
-export class Bullet extends BaseCharacter {
+export class Bullet extends Base {
   private speed = 500;
   private lifespanMs = 3000;
   private armDelayMs = 1300;
@@ -47,7 +48,7 @@ export class Bullet extends BaseCharacter {
     if (opts.armDelayMs  !== undefined) this.armDelayMs  = opts.armDelayMs;
     if (opts.radius      !== undefined) {
       const d = Math.max(1, Math.round(opts.radius * 2));
-      this.setDisplaySize(d, d); // 見た目更新 → BaseCharacter が body 同期
+      this.setDisplaySize(d, d);
     }
     return this;
   }
@@ -65,19 +66,39 @@ export class Bullet extends BaseCharacter {
   /** 発射（角度は度数法） */
   fire(angleDeg: number, speed = this.speed) {
     this.bornAt = this.scene.time.now;
+
+    // ★ 発射時だけ鳴らす
+    if (SoundManager.I?.effects?.bulletFire) {
+      SoundManager.I.effects.bulletFire();
+    }
+
     const body = this.body as Phaser.Physics.Arcade.Body;
     this.scene.physics.velocityFromAngle(angleDeg, speed, body.velocity);
     this.setAngle(angleDeg);
   }
 
+  /** 消滅種別を明示してから通常死処理へ */
+  private vanishAs(kind: "bullet_timeout" | "bullet_collision") {
+    this.setData("kind", kind);
+    this.die();
+  }
+
+  override takeDamage(n = 1) {
+    if (this.active && !this.getData("kind")) {
+      this.setData("kind", "bullet_collision");
+    }
+    super.takeDamage(n);
+  }
+
   preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
 
-    // 寿命で自然消滅
+    // ★（削除）ここでSEを鳴らさない
+    // SoundManager.I.effects.bulletTimeout(); ← これが連続再生の元凶
+
+    // 寿命で自然消滅：一度だけ timeout SE
     if (time - this.bornAt >= this.lifespanMs) {
-      // 通常の死亡処理の前に種別を上書き
-      this.setData("kind", "bullet_timeout");
-      this.die();
+      this.vanishAs("bullet_timeout");
     }
   }
 }

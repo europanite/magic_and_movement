@@ -7,6 +7,7 @@ import { Boss } from "../entities/Boss";
 import { Player } from "../entities/Player";
 import { Bullet } from '../entities/Bullet';
 import { DeathFX } from "../effects/DeathFX";
+import { SoundManager } from "../audio/SoundManager";
 
 export class MainScene extends Phaser.Scene {
   private player!: Player;
@@ -82,14 +83,16 @@ export class MainScene extends Phaser.Scene {
     this.load.audio("se_player_die", "audio/character_destroy.mp3");
     this.load.audio("se_enemy_die",  "audio/character_destroy.mp3");
     this.load.audio("se_boss_die",   "audio/character_destroy.mp3");
-    this.load.audio("se_bullet_timeout", "audio/bullet_timeout.mp3");
-    this.load.audio("se_bullet_collision", "audio/bullet_timeout.mp3");
+
+    this.load.audio("se_bullet_fire",     "audio/bullet_timeout.mp3");
+    this.load.audio("se_bullet_timeout",  "audio/bullet_timeout.mp3");
+    this.load.audio("se_bullet_collision","audio/bullet_timeout.mp3");
   }
 
   create() {
     // log
     logger.cmd("GAME START");
-
+    SoundManager.init(this);
     // audio
     const bgm = this.sound.add("bgm_main", { loop: true, volume: 0.4 });
     bgm.play();
@@ -135,8 +138,6 @@ export class MainScene extends Phaser.Scene {
     this.player.play('idle-right');
 
     // bullets group
-    // ★ 弾グループを BaseCharacter(Bullet) 用に統一
-    // bullets group（統一）
     this.bullets = this.physics.add.group({
       classType: Bullet,
       runChildUpdate: true,

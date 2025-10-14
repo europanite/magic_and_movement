@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { DeathFX } from "../effects/DeathFX";
 
-export type BaseCharacterOptions = {
+export type BaseOptions = {
   scale?: number;
   immovable?: boolean;
   collideWorldBounds?: boolean;
@@ -10,13 +10,13 @@ export type BaseCharacterOptions = {
   drawHitbox?: boolean;
 };
 
-export class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
+export class Base extends Phaser.Physics.Arcade.Sprite {
   static DEBUG_HITBOXES = true;
   protected maxHp = 1;
   protected hp = 1;
   protected nameTag?: Phaser.GameObjects.Text;
   protected hitboxGfx?: Phaser.GameObjects.Graphics;
-  protected opts: Required<BaseCharacterOptions>;
+  protected opts: Required<BaseOptions>;
 
   constructor(
     scene: Phaser.Scene,
@@ -26,7 +26,7 @@ export class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     frame: number | string = 0,
     public displayName: string = "",
     maxHp = 1,
-    options: BaseCharacterOptions = {}
+    options: BaseOptions = {}
   ) {
     super(scene, x, y, texture, frame);
 
@@ -107,20 +107,24 @@ export class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     return this.hp <= 0 || !this.active;
   }
 
-  /** デフォルトの死亡挙動 */
   protected die() {
+    // ① 再入防止
+    if (this.getData("__dying")) return;
+    this.setData("__dying", true);
+
     this.nameTag?.destroy();
     this.hitboxGfx?.destroy();
 
-    // ★ 種類判定（デフォルト enemy）
     const kind = (this.getData("kind") as "player"|"enemy"|"boss") ?? "enemy";
-    // ★ 演出＆音 → 完了後 destroy（DeathFX 側で破棄）
-    DeathFX.play(this.scene, this as unknown as Phaser.GameObjects.Sprite, kind);
-    // active を落として多重呼び出しを防止
+
+    // ② まず即時に無効化して preUpdate からもう呼ばれないようにする
     this.setActive(false).setVisible(false);
-    // 以降の update では処理させない
-    (this.body as Phaser.Physics.Arcade.Body).enable = false;
-    this.destroy();
+    const body = this.body as Phaser.Physics.Arcade.Body | undefined;
+    if (body) body.enable = false;
+
+    // ③ 破棄は DeathFX 側に任せる（ここで destroy しない！）
+    //    DeathFX.play は tween 完了時に destroy する実装に統一
+    DeathFX.play(this.scene, this as unknown as Phaser.GameObjects.Sprite, kind);
   }
 
   /** 1フレームごとにHP=0の個体を整理 */
@@ -135,7 +139,7 @@ export class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
       this.nameTag.setPosition(this.x, this.y - this.displayHeight * 0.5 - 8);
     }
 
-    if (this.hitboxGfx && BaseCharacter.DEBUG_HITBOXES && this.opts.drawHitbox) {
+    if (this.hitboxGfx && Base.DEBUG_HITBOXES && this.opts.drawHitbox) {
       const body = this.body as Phaser.Physics.Arcade.Body;
       this.hitboxGfx.clear();
       this.hitboxGfx.lineStyle(1, 0x00ff00, 0.9);
