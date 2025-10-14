@@ -1,0 +1,51 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Shout Demo</title>
+<body style="margin:0;background:#3d1fc4">
+
+  <!-- UIバー -->
+  <div style="position:fixed;left:0;right:0;top:0;padding:8px 12px;
+              background:#1f2530;color:#cfe8ff;font:14px/1 system-ui;display:flex;gap:8px;">
+    <button id="btnMic" style="padding:6px 10px;">🎤 Start mic</button>
+    <span id="micStatus">mic: idle</span>
+  </div>
+
+  <div 
+    style="margin:0;"
+  >
+    <div 
+      id="game-root" 
+      style="
+        background: #b61b1b;
+        margin:0;
+    ">
+    </div>
+
+    <!-- <pre 
+      id="log" 
+      style="
+      margin: 0;
+      background: #000;
+      color: #0f0;
+      font: 12px/1.4 monospace;
+      padding: 6px;
+      border-top: 1px solid #222;
+    ">
+    </pre> -->
+
+    <pre 
+      id="log" 
+      style="
+        margin: 0;
+        background: #000;
+        color: #0f0;
+        font: 12px/1.4 monospace;
+        padding: 6px;
+        border-top: 1px solid #222;
+        height: 160px;        /* ← 固定の最大高さ（お好みで調整） */
+        overflow: hidden;     /* ← スクロール禁止。はみ出しは切り捨て */
+      ">
+
+</div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
