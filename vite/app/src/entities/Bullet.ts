@@ -56,10 +56,6 @@ export class Bullet extends Base {
   /** 武装（アーム）済みか？ */
   public isArmed(): boolean {
     let b = (this.scene.time.now - this.bornAt) >= this.armDelayMs;
-    logger.cmd(`this.scene.time.now ${this.scene.time.now}`);
-    logger.cmd(`this.bornAt ${this.bornAt}`);
-    logger.cmd(`this.armDelayMs ${this.armDelayMs}`);
-    logger.cmd(`this.scene.time.now - this.bornAt ${this.scene.time.now - this.bornAt}`);
     return b;
   }
 
@@ -92,10 +88,6 @@ export class Bullet extends Base {
 
   preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
-
-    // ★（削除）ここでSEを鳴らさない
-    // SoundManager.I.effects.bulletTimeout(); ← これが連続再生の元凶
-
     // 寿命で自然消滅：一度だけ timeout SE
     if (time - this.bornAt >= this.lifespanMs) {
       this.vanishAs("bullet_timeout");

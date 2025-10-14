@@ -9,7 +9,7 @@ const config: Phaser.Types.Core.GameConfig = {
   parent: "game-root",
   scene: [TitleScene, MainScene],
   backgroundColor: "#20242a",
-  physics: { default: "arcade", arcade: { } },
+  physics: { default: "arcade", arcade: { debug: true } }
 };
 
 new Phaser.Game(config);
