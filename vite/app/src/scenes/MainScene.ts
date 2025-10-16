@@ -201,7 +201,7 @@ export class MainScene extends Phaser.Scene {
     });
 
     // === Rocks ===
-    this.rocks = this.physics.add.staticGroup();
+    this.rocks = this.physics.add.group();
 
     const ROCK_COUNT = 24;
     const MIN_W = 24, MAX_W = 96; 

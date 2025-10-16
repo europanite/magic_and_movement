@@ -7,7 +7,7 @@ export class Player extends CharacterBase {
 
   // 自動移動
   private moveTarget: Phaser.Math.Vector2 | null = null;
-  private targetRock: Phaser.GameObjects.Rectangle | null = null;
+  private targetRock: import("./Rock").Rock | null = null;
   private moveSpeed = 180;
   private facing: "right" | "left" | "forward" | "back" = "forward";
   private interrupted = false;
