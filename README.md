@@ -11,6 +11,8 @@ The gameplay model is based on Fire and Movement. Two magical girls take turns s
 | Back || done | 
 | Right | | done | 
 | Left | | done | 
+| Walk | | | 
+| Work | | | 
 | Light | | | 
 | Play | | | 
 | Pray | | | 
