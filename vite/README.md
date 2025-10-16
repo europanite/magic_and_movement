@@ -1,6 +1,6 @@
 # [Magic and Movement](https://github.com/europanite/magic_and_movement "Magic and Movement")
 
-Speak Commands and control your character.
+Speak commands to control your character.
 
 One magical girl shoots enemies and advance through a world.
 <!-- Two magical girls take turns suppressing enemies as they advance through a world. -->
@@ -14,9 +14,6 @@ One magical girl shoots enemies and advance through a world.
 | Right | go right | done | 
 | Left | go left | done | 
 | Walk | go | | 
-| Turn Right | turn right | | 
-| Turn Left | turn left | | 
-| Turn Back | turn back | | 
 | Work | | | 
 | Light | light up the stage | | 
 | Play | | | 
