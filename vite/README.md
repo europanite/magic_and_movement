@@ -2,8 +2,9 @@
 
 Speak Commands and control your character.
 
-Two magical girls take turns suppressing enemies as they advance through a world.
-The gameplay model is based on Fire and Movement. 
+One magical girl shoots enemies and advance through a world.
+<!-- Two magical girls take turns suppressing enemies as they advance through a world. -->
+<!-- The gameplay model is based on Fire and Movement.  -->
 
 ## Commands
 | command | description | implement |
@@ -22,6 +23,7 @@ The gameplay model is based on Fire and Movement.
 | Pray | ? | | 
 | Lay | lay down | | 
 | Stay |  | | 
+| dig | dig a hole | | 
 | Stop | stop | done | 
 | Run | move fast | | 
 | Learn | ? | | 

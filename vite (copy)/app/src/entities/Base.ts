@@ -64,7 +64,7 @@ export class Base extends Phaser.Physics.Arcade.Sprite {
 
     if (this.opts.showLabel) {
       this.nameTag = scene.add.text(this.x, this.y - this.displayHeight * 0.5 - 8, this.displayName, {
-        fontSize: "18px",
+        fontSize: "12px",
         color: "#fff",
         stroke: "#000",
         strokeThickness: 2,
