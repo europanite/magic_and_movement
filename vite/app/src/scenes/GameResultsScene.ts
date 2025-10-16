@@ -24,7 +24,7 @@ export class GameResultsScene extends Phaser.Scene {
     this.add.rectangle(0, 0, w * 2, h * 2, 0x000000, 0.85).setOrigin(0);
 
     // 文言
-    const title = this.add.text(w / 2, h * 0.35, "GAME OVER", {
+    const title = this.add.text(w / 2, h * 0.35, "GAME Result", {
       fontFamily: "system-ui, sans-serif",
       fontSize: "64px",
       color: "#ffffff",

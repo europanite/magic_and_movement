@@ -5,118 +5,43 @@ import { logger } from "../logger";
 export class Player extends CharacterBase {
   public direction: number = 90;
 
-  // 自動移動
   private moveTarget: Phaser.Math.Vector2 | null = null;
   private targetRock: Phaser.GameObjects.Rectangle | null = null;
   private moveSpeed = 180;
-  private facing: "right" | "left" | "forward" | "back" = "forward";
   private interrupted = false;
   private clampEnabled = false;
 
-constructor(scene: Phaser.Scene, x: number, y: number, name = "you", maxHp = 5) {
-  super(scene, x, y, "player", 0, name, maxHp, {
-    sounds: { death: "se_player_die" },
-    collideWorldBounds: true, // ←★追加！
-  });
-  this.setData("kind", "player");
-}
+  constructor(scene: Phaser.Scene, x: number, y: number, name = "you", maxHp = 5) {
+    super(scene, x, y, "player", 0, name, maxHp, {
+      sounds: { death: "se_player_die" },
+      collideWorldBounds: true,
+    });
+    this.setData("kind", "player");
+  }
 
-  /**
-   * 岩の名前を呼んだときに MainScene から呼ばれる想定のAPI
-   * - 目的地を岩の中心座標に設定
-   * - 目的岩の参照を保持（当たり判定チェックで使用）
-   */
+  /** 岩を目的地にセット（向くだけ。歩行は walk コマンドで開始） */
   moveToRock(target: Phaser.GameObjects.Rectangle) {
     this.moveTarget = new Phaser.Math.Vector2(target.x, target.y);
     this.targetRock = target;
-    logger.info(`Move: heading to rock "${target.getData("name")}"`);
+    // 向くだけ（歩かせない）
+    const ang = Math.atan2(target.y - this.y, target.x - this.x);
+    this.setDirection(Phaser.Math.RadToDeg(ang));
+    logger.info(`Aim: facing rock "${target.getData("name")}"`);
+    this.startAutoMove(); // ★ 追加：ターゲット設定と同時に歩行開始
   }
 
-  private playWalkAnim() {
-    const key = {
-      right:   "walk-right",
-      left:    "walk-left",
-      forward: "walk-forward",
-      back:    "walk-back",
-    }[this.facing];
-    if (this.anims.currentAnim?.key !== key) {
-      this.anims.play(key, true);
-    }
+  /** ナビ開始（目的地が設定済みなら歩行を開始） */
+  startAutoMove() {
+    if (!this.moveTarget) return;
+    this.setSpeed(this.moveSpeed);
+    logger.info("Auto-move started.");
   }
 
-  public isAutoMoving(): boolean {
-    return !!this.moveTarget;
-  }
-
-  /**
-   * 自動移動中は「プレイヤー×岩の collider」を一時的に無効化するため、
-   * Arcade Body の checkCollision を切り替える。
-   * 目的外の岩では止まらず、目的の岩のヒットボックスに入った瞬間だけ停止。
-   */
-  preUpdate(time: number, delta: number) {
-    super.preUpdate(time, delta);
-    // --- 割り込みがあったら、このフレームは何もせず終了 ---
-    if (this.interrupted) {
-      this.interrupted = false; // ←★ ここで即リセット
-      return;
-    }
-
-    const body = this.body as Phaser.Physics.Arcade.Body;
-
-    if (this.moveTarget) {
-
-      const dx = this.moveTarget.x - this.x;
-      const dy = this.moveTarget.y - this.y;
-
-      // Direction
-      if (Math.abs(dx) >= Math.abs(dy)) {
-        this.facing = dx >= 0 ? "right" : "left";
-        this.direction = dx >= 0 ? 0 : 180;
-      } else {
-        this.facing = dy >= 0 ? "back" : "forward";
-        this.direction = dy >= 0 ? 90 : 270;
-      }
-
-      // 速度更新 & アニメ
-      const angle = Math.atan2(dy, dx);
-      this.scene.physics.velocityFromRotation(angle, this.moveSpeed, body.velocity);
-      this.playWalkAnim();
-
-      // ---- ② 目的の岩の当たり判定に触れたら停止 ----
-      if (this.targetRock && (this.targetRock.body as Phaser.Physics.Arcade.StaticBody)) {
-        const pr = new Phaser.Geom.Rectangle(body.x, body.y, body.width, body.height);
-        const rb = this.targetRock.body as Phaser.Physics.Arcade.StaticBody;
-        const rr = new Phaser.Geom.Rectangle(rb.x, rb.y, rb.width, rb.height);
-
-        if (Phaser.Geom.Intersects.RectangleToRectangle(pr, rr)) {
-          this.stopAutoMove();
-          logger.info("Stopped on target rock hitbox.");
-        }
-      }
-    } else {
-      // 自動移動していないときは通常の衝突（岩で止まる）に戻す
-      if (body.checkCollision.none !== false) body.checkCollision.none = false;
-    }
-
-    // カメラが自分を映すようになったらクランプON
-    const cam = this.scene.cameras.main;
-    if (!this.clampEnabled) {
-      if (cam.worldView.contains(this.x, this.y)) {
-        this.clampEnabled = true;
-      }
-      return; // それまでは押し戻さない
-    }
-
-    this.keepInsideCameraView();
-  }
-
-  /** 自動移動の明示停止API（停止時に衝突判定も元に戻す） */
+  /** ナビ停止（速度0＋目的地解除） */
   public stopAutoMove() {
+    this.stop(); // speed=0 により CharacterBase が停止処理＆アニメ停止に移行
     const body = this.body as Phaser.Physics.Arcade.Body;
-    if (body) {
-      body.setVelocity(0, 0);
-      body.checkCollision.none = false; // 通常の collider を復帰
-    }
+    if (body) body.checkCollision.none = false;
     this.moveTarget = null;
     this.targetRock = null;
   }
@@ -129,32 +54,72 @@ constructor(scene: Phaser.Scene, x: number, y: number, name = "you", maxHp = 5) 
     }
   }
 
-  // Player.ts の class Player 内に追加
+  public isAutoMoving(): boolean {
+    return !!this.moveTarget && this.speed > 0;
+  }
+
+  /** 画面内クランプ */
   private keepInsideCameraView() {
     const body = this.body as Phaser.Physics.Arcade.Body;
     if (!body) return;
-
     const cam = this.scene.cameras.main;
-    // いま画面に映っているワールド領域（スクロール込み）
     const view = cam.worldView;
-
-    // ヒットボックスの“半分”で余白（はみ出しを防ぐ）
-    const halfW = body.width  * 0.5;
+    const halfW = body.width * 0.5;
     const halfH = body.height * 0.5;
-
-    // クランプ先（左/右/上/下）
-    const minX = view.left  + halfW;
+    const minX = view.left + halfW;
     const maxX = view.right - halfW;
-    const minY = view.top   + halfH;
-    const maxY = view.bottom- halfH;
-
-    // 実際に押し戻す
+    const minY = view.top + halfH;
+    const maxY = view.bottom - halfH;
     this.x = Phaser.Math.Clamp(this.x, minX, maxX);
     this.y = Phaser.Math.Clamp(this.y, minY, maxY);
-
-    // 位置を直接いじったので、物理Bodyも同期
     body.position.x = this.x - halfW;
     body.position.y = this.y - halfH;
   }
 
+  /** 毎フレーム：まずナビ処理で speed/direction を更新 → 親の運動モデルに委譲 */
+  preUpdate(time: number, delta: number) {
+    // ===== ① ナビ処理（速度・向きだけを更新し、速度適用は親に任せる） =====
+    if (this.interrupted) { this.interrupted = false; /* 1フレームだけスキップ */ }
+    else if (this.moveTarget) {
+      const dx = this.moveTarget.x - this.x;
+      const dy = this.moveTarget.y - this.y;
+      const ang = Math.atan2(dy, dx);
+      this.setDirection(Phaser.Math.RadToDeg(ang));
+
+      // 目的地に向けて歩行（walk コマンドが来ていない場合は speed=0 のまま）
+      if (this.speed > 0) {
+        // 到着判定（岩ヒットボックス優先／なければ距離しきい値）
+        let arrived = false;
+
+        if (this.targetRock && (this.targetRock.body as Phaser.Physics.Arcade.StaticBody)) {
+          const body = this.body as Phaser.Physics.Arcade.Body;
+          const pr = new Phaser.Geom.Rectangle(body.x, body.y, body.width, body.height);
+          const rb = this.targetRock.body as Phaser.Physics.Arcade.StaticBody;
+          const rr = new Phaser.Geom.Rectangle(rb.x, rb.y, rb.width, rb.height);
+          if (Phaser.Geom.Intersects.RectangleToRectangle(pr, rr)) arrived = true;
+        } else {
+          const dist2 = dx * dx + dy * dy;
+          arrived = dist2 <= (24 * 24); // 距離しきい値（px）
+        }
+
+        if (arrived) {
+          this.stopAutoMove(); // ★必ず停止
+          logger.info("Arrived at rock. Auto-move stopped.");
+        }
+      }
+    }
+
+    // ===== ② 親側で speed/direction → velocity & アニメ同期 =====
+    super.preUpdate(time, delta);
+
+    // ===== ③ 可視範囲クランプ =====
+    const cam = this.scene.cameras.main;
+    if (!this.clampEnabled) {
+      if (cam.worldView.contains(this.x, this.y)) this.clampEnabled = true;
+    } else {
+      this.keepInsideCameraView();
+    }
+  }
+
+  // CharacterBase.onWalkFrame が歩行アニメを方向に合わせて再生するので、Player 側は上書き不要
 }

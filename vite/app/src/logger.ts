@@ -32,8 +32,6 @@ export class OverlayLogger {
     console.error = (...a: any[]) => { this.write("error", a.join(" ")); _error(...a); };
   }
 
-
-  /** ユーザー向け API */
   log(msg: string)  { this.write("log", msg); }
   info(msg: string) { this.write("info", msg); }
   warn(msg: string) { this.write("warn", msg); }
@@ -43,27 +41,23 @@ export class OverlayLogger {
   clear() { this.buf = []; this.render(); }
   toggle() { this.visible = !this.visible; (this.el as any).style.display = this.visible ? "" : "none"; }
 
-  /** コア：バッファ追加 → 上限超過ぶんを破棄 → 逆順で描画（最新が最上段） */
   private write(level: LogLevel, msg: string) {
     this.buf.push({ ts: Date.now(), level, msg });
     if (this.buf.length > this.max) {
-      // 先頭（＝最も古い）から削る
       this.buf.splice(0, this.buf.length - this.max);
     }
     this.render();
   }
 
   private render() {
-    // 最新→古い の順に並べて上から描画
     const lines = this.buf
-      .slice()            // コピー
-      .reverse()          // 逆順（最新が先頭）
+      .slice() 
+      .reverse()
       .map(e => this.format(e));
     (this.el as HTMLPreElement).textContent = lines.join("\n");
   }
 
   private format(e: Entry) {
-    // ここは好みで。レベルの装飾など（例： [INFO] など）
     switch (e.level) {
       case "info":  return `[INFO]  ${e.msg}`;
       case "warn":  return `[WARN]  ${e.msg}`;

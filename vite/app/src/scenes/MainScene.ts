@@ -62,7 +62,7 @@ export class MainScene extends Phaser.Scene {
   private dir = { forward:false, back:false, left:false, right:false };
   private W = 1200;
   private H = 900;
-  private Max_H = 900;
+  private Max_H = 3600;
   private X_PLAYER = this.W/2;
   private Y_PLAYER = this.Max_H - this.H/2;
 
@@ -335,33 +335,54 @@ export class MainScene extends Phaser.Scene {
     this.setupMic();
 
     this.registerInterruptHandlers();
+    window.dispatchEvent(new CustomEvent("game-ready", { detail: { player: this.player } }));
+
+    const p = this.player;
+
+    this.input.keyboard.on("keydown", (ev: KeyboardEvent) => {
+      // 矢印/WASD/スペース/シフトなど任意のキーを割り込みトリガーに
+      // ここでは例としてすべてのkeydownで割り込む
+      if (p?.interruptAutoMove) p.interruptAutoMove();
+    });
+
+    // もしマウス/タッチで移動・攻撃を受け付けるなら同様に
+    this.input.on("pointerdown", () => { p?.interruptAutoMove?.(); });
+
   }
 
   update() {
-    const speed = 200;
     const left    = (this.cursors.left?.isDown  || this.wasd.A.isDown   || this.dir.left);
     const right   = (this.cursors.right?.isDown || this.wasd.D.isDown   || this.dir.right);
     const forward = (this.cursors.up?.isDown    || this.wasd.W.isDown   || this.dir.forward);
     const back    = (this.cursors.down?.isDown  || this.wasd.S.isDown   || this.dir.back);
 
-    for (const friendly of this.friendlies.getChildren()) {
-      if ((friendly as any).isAutoMoving?.()) continue;
-      friendly.setVelocity(0);
-      let moving = false;
-      if (left)    { friendly.setVelocityX(-speed); this.facing = "left";    moving = true; friendly.direction=180; }
-      if (right)   { friendly.setVelocityX( speed); this.facing = "right";   moving = true; friendly.direction=0; }
-      if (forward) { friendly.setVelocityY(-speed); this.facing = "forward"; moving = true; friendly.direction=270; }
-      if (back)    { friendly.setVelocityY( speed); this.facing = "back";    moving = true; friendly.direction=90; }
-      // animation plays or waits
-      if (moving) {
-        friendly.play(`walk-${this.facing}`, true);
-      } else {
-        friendly.anims.stop();
-        const idleFrame = MainScene.FRAMES[this.facing].idle;
-        friendly.setFrame(idleFrame);
-      }
-    }
+    for (const go of this.friendlies.getChildren()) {
+      const ch = go as any;
 
+      if (!left && !right && !forward && !back) {
+        ch.stop(); // speed=0
+        ch.anims.stop();
+        const idle = MainScene.FRAMES[this.facing].idle;
+        ch.setFrame(idle);
+        continue;
+      }
+
+      let dx = 0, dy = 0;
+      if (left)  dx -= 1;
+      if (right) dx += 1;
+      if (forward) dy -= 1;
+      if (back)    dy += 1;
+
+      const ang = Phaser.Math.RadToDeg(Math.atan2(dy, dx)); // -180..180
+      const deg = (ang + 360) % 360; // 0..359
+
+      ch.setDirection(deg).walk();
+      this.facing =
+        Math.abs(dx) >= Math.abs(dy)
+          ? (dx >= 0 ? "right" : "left")
+          : (dy >= 0 ? "back" : "forward");
+      ch.play(`walk-${this.facing}`, true);
+    }
   }
 
   private makeWalkAnim(key: string, frames: number[]) {
@@ -405,22 +426,24 @@ export class MainScene extends Phaser.Scene {
             }
           });
 
+          logger.cmd(`voice: ${lower}`);
+
           this.rocks.children.each((obj: Phaser.GameObjects.GameObject) => {
             const rock = obj as Rock;
             const rockName = (rock.getData("name") as string).toLowerCase();
             if (lower.includes(rockName)) {
               logger.cmd(`Voice detected rock "${rockName}"`);
               this.player.moveToRock(rock);
+              this.player.walk();
             }
           });
-
-          logger.cmd(`voice: ${lower}`);
 
           // Movement
           if (/\bforward\b/.test(lower)) { set("forward", true);  set("back",false); set("left",false); set("right",false); }
           if (/\bback\b/.test(lower))    { set("forward", false); set("back",true);  set("left",false); set("right",false); }
           if (/\bleft\b/.test(lower))    { set("forward", false); set("back",false); set("left",true);  set("right",false); }
           if (/\bright\b/.test(lower))   { set("forward", false); set("back",false); set("left",false); set("right",true); }
+          if (/\walk\b/.test(lower))   { set("forward", false); set("back",false); set("left",false); set("right",true); }
           if (/\bstop\b/.test(lower))    { set("forward", false); set("back",false); set("left",false); set("right",false); }
 
           if (/\bshoot\b/.test(lower) && !/\bshoot (left|right|forward|back)\b/.test(lower)) {
@@ -437,7 +460,6 @@ export class MainScene extends Phaser.Scene {
         asr.stop(); running = false; btn.textContent = "🎤 Start mic"; stat.textContent = "mic: idle";
       }
     };
-
   }
 
   // === LoS / FOV / Range ===
@@ -521,5 +543,7 @@ export class MainScene extends Phaser.Scene {
       });
     });
   }
-  
+  public getPlayer() {
+    return this.player;
+  }
 }
