@@ -17,13 +17,15 @@ The gameplay model is based on Fire and Movement. Two magical girls take turns s
 | Play | | | 
 | Pray | | | 
 | Stay | | | 
-| Stop | | | 
+| Stop | | done | 
 | Run | | | 
 | Learn | | | 
 | Lock | | | 
-| Rock | | | 
+| Rock | | |
+| Barrage | | | 
 | Enemy name | | done | 
 | Rock name | | done | 
+
 etc
 
 [![CI](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/ci.yml/badge.svg)](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/ci.yml)
