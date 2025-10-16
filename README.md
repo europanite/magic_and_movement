@@ -1,7 +1,8 @@
-# [Shout and Movement](https://github.com/europanite/standard_react_fastapi_environment "Shout and Movement")
+# [Magic and Movement](https://github.com/europanite/standard_react_fastapi_envimagic_and_movementronment "Magic and Movement")
 
-英単語を話して、コマンド入力し、キャラクターを動かす。モデルはFire and Movementである。2人の魔法少女がキャラクターが交互に敵を制圧しながら、縦長の世界を前進し、敵を倒していく。日本人が苦手な発音を使いわけることを目的としている。
+Speak Commands and control your character.
 
+The gameplay model is based on Fire and Movement. Two magical girls take turns suppressing enemies as they advance through a world.
 
 ## Commands
 | command | description | implement |
