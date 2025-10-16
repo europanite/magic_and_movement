@@ -1,4 +1,3 @@
-// app/src/scenes/GameResultsScene.ts
 import Phaser from "phaser";
 
 type GameResultsData = {
@@ -15,7 +14,6 @@ export class GameResultsScene extends Phaser.Scene {
   }
 
   preload() {
-    // タイトルと同系色の暗背景があると可読性↑（任意で画像を使うならここでload）
   }
 
   create(data: GameResultsData) {
@@ -47,7 +45,7 @@ export class GameResultsScene extends Phaser.Scene {
       { fontSize: "18px", color: "#aaaaaa" }
     ).setOrigin(0.5);
 
-    // ボタン（タイトルへ／リトライ）
+    // Buttons（Title／Retry）
     const btnStyle: Phaser.Types.GameObjects.Text.TextStyle = {
       fontSize: "28px",
       color: "#ffffff",
@@ -62,7 +60,7 @@ export class GameResultsScene extends Phaser.Scene {
       .setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     btnRetry.on("pointerup", () => {
-      // MainScene を新規開始（スコア等は初期化想定）
+      // MainScene Starts
       this.scene.start("MainScene");
     });
 
@@ -70,9 +68,7 @@ export class GameResultsScene extends Phaser.Scene {
       this.scene.start("TitleScene");
     });
 
-    // 軽い演出
     this.tweens.add({ targets: title, alpha: 0.5, yoyo: true, repeat: -1, duration: 900 });
-
     this.ui = this.add.container(0, 0, [title, reason, stats, btnRetry, btnTitle]).setDepth(1000);
   }
 }
