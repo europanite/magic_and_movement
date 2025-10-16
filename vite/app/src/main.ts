@@ -1,15 +1,26 @@
 import Phaser from "phaser";
 import { TitleScene } from "./scenes/TitleScene";
 import { MainScene } from "./scenes/MainScene";
-import { logger } from "./logger";
+import { GameResultsScene } from "./scenes/GameResultsScene";
+import { logger } from "./logger"
 
 logger.info("Booting Phaser...");
 
+const BASE_W = 1200;   // 論理解像度（横）
+const BASE_H = 900;    // 論理解像度（縦）← 4:3 を維持
+
 const config: Phaser.Types.Core.GameConfig = {
   parent: "game-root",
-  scene: [TitleScene, MainScene],
+  type: Phaser.AUTO,
+  width: BASE_W,
+  height: BASE_H,
   backgroundColor: "#20242a",
-  physics: { default: "arcade", arcade: { } },
+  physics: { default: "arcade", arcade: { debug: true } },
+  scene: [TitleScene, MainScene, GameResultsScene],
+  scale: {
+    mode: Phaser.Scale.FIT,
+    // autoCenter: Phaser.Scale.CENTER_BOTH
+  },
 };
 
 new Phaser.Game(config);

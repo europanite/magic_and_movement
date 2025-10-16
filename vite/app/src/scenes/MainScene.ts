@@ -6,19 +6,17 @@ import { Enemy } from "../entities/Enemy";
 import { Boss } from "../entities/Boss";
 import { Player } from "../entities/Player";
 import { Bullet } from '../entities/Bullet';
-import { DeathFX } from "../effects/DeathFX";
 import { SoundManager } from "../audio/SoundManager";
 
 export class MainScene extends Phaser.Scene {
   private player!: Player;
+  private boss!: Boss;
   private bullets!: Phaser.Physics.Arcade.Group; 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private friendlies!: Phaser.Physics.Arcade.Group;
   private enemies!:    Phaser.Physics.Arcade.Group;
   private rocks!:      Phaser.Physics.Arcade.StaticGroup;
-  private boss!: Boss; // ←型をBossに
-  // 既存のフィールド群の近くに追加
-  private navTargetRock: Phaser.GameObjects.Rectangle | null = null;
+  private bgm?: Phaser.Sound.BaseSound;
 
   private words_rock = [
     "rock","stone","hill","cliff","sand","dust","mud","cave","valley","island",
@@ -28,7 +26,7 @@ export class MainScene extends Phaser.Scene {
     "shadow","light","sun","moon","star","sky","dawn","night","day","twilight",
     "earth","soil","field","plain","plate","ridge","path","trail","step","road",
     "wall","gate","bridge","pillar","arch","ring","circle","cube","crystal","gem",
-    "iron","silver","gold","metal","ore","coal","salt","clay","brick","dusty",
+    "iron","silver","gold","metal","orange","coal","salt","clay","brick","dusty",
     "silent","still","calm","cold","hard","solid","heavy","quiet","deep","rough",
     "wild","lonely","ancient","broken","gray","brown","smooth","soft","sharp","flat"
     ]
@@ -48,13 +46,11 @@ export class MainScene extends Phaser.Scene {
   wasd!: { [k: string]: Phaser.Input.Keyboard.Key };
   facing: "back" | "left" | "right" | "forward" = "back";
 
-  // === スプライトシート設定 ===
-  // 1コマのサイズ（あなたの素材に合わせて調整）
+  // === Sprite Sheet ===
   static FRAME_W = 32;
   static FRAME_H = 32;
 
-  // フレーム割り当て（例：4x4 = 16コマ）
-  // 0-3: 下、4-7: 左、8-11: 右、12-15: 上 という並びを想定
+  // Frame Assignment
   static FRAMES = {
     back:  { idle: 0,  walk: [0, 1, 2] },
     left:  { idle: 3,  walk: [3, 4, 5] },
@@ -64,11 +60,11 @@ export class MainScene extends Phaser.Scene {
 
   // input
   private dir = { forward:false, back:false, left:false, right:false };
-  private shootCooldown = 140;
-  private lastShot = 0;
-  private  W = 1200;
-  private  H = 900;
-  private  Max_H = 4800;
+  private W = 1200;
+  private H = 900;
+  private Max_H = 900;
+  private X_PLAYER = this.W/2;
+  private Y_PLAYER = this.Max_H - this.H/2;
 
   constructor(){
     super("MainScene");
@@ -83,7 +79,6 @@ export class MainScene extends Phaser.Scene {
     this.load.audio("se_player_die", "audio/character_destroy.mp3");
     this.load.audio("se_enemy_die",  "audio/character_destroy.mp3");
     this.load.audio("se_boss_die",   "audio/character_destroy.mp3");
-
     this.load.audio("se_bullet_fire",     "audio/bullet_timeout.mp3");
     this.load.audio("se_bullet_timeout",  "audio/bullet_timeout.mp3");
     this.load.audio("se_bullet_collision","audio/bullet_timeout.mp3");
@@ -93,31 +88,33 @@ export class MainScene extends Phaser.Scene {
     // log
     logger.cmd("GAME START");
     SoundManager.init(this);
+
     // audio
     const bgm = this.sound.add("bgm_main", { loop: true, volume: 0.4 });
     bgm.play();
+    
 
     // ground
     this.cameras.main.setBackgroundColor(0x66CDAA);
-    this.add.rectangle(this.W/2, this.H/2, this.W, this.H, 0x66CDAA);
-
-    this.land = this.physics.add.staticGroup();
 
     // boundary & camera
     this.cameras.main.setBounds(0, 0, this.W, this.Max_H);
     this.physics.world.setBounds(0, 0, this.W, this.Max_H);
 
-    // 弾グループ
-
-
-    // ★ 弾同士の衝突で相殺（コールバックは1回登録でOK）
-
-
-    // 例：プレイヤー発射処理（角度はプレイヤー向きから）
-    
     // Player
     this.friendlies = this.physics.add.group({ classType: Player, runChildUpdate: true });
-    this.player = new Player(this, this.W/2, this.Max_H - this.H/2, "you", 5);
+    this.player = new Player(
+      this, 
+      this.X_PLAYER,
+      this.Y_PLAYER,
+      "you",
+      5);
+
+    // プレイヤー生成後、destroyを一度だけ監視
+    this.player.once(Phaser.GameObjects.Events.DESTROY, () => {
+      this.triggerGameResults("defeated");
+    });
+
     this.friendlies.add(this.player);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -129,21 +126,6 @@ export class MainScene extends Phaser.Scene {
       SPACE: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
     } as any;
 
-    // （任意）アニメ登録：右・左・上・下など
-    this.anims.create({
-      key: 'idle-right',
-      frames: [{ key: 'player', frame: 0 }],
-      frameRate: 1, repeat: -1,
-    });
-    this.player.play('idle-right');
-
-    // bullets group
-    this.bullets = this.physics.add.group({
-      classType: Bullet,
-      runChildUpdate: true,
-      maxSize: 600,
-    });
-
     // animation
     this.makeWalkAnim("walk-back",    MainScene.FRAMES.back.walk);
     this.makeWalkAnim("walk-left",    MainScene.FRAMES.left.walk);
@@ -152,13 +134,18 @@ export class MainScene extends Phaser.Scene {
   
     // 発射（スペース）
     this.input.keyboard!.on('keydown-SPACE', () => {
-      this.shoot(); 
+      // 既存チューニングを維持（400, r8, life 1000ms, arm 300ms）
+      this.player.shoot(this.player.direction, {
+        speed: 400,
+        radius: 8,
+        lifespanMs: 1000,
+        armDelayMs: 300,
+      });
     });
 
-    
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
-    // 入力（WASD/矢印 = 移動、H/J/K/L = 左/下/上/右に射撃）
+    // Player Input
     const kb = this.input.keyboard!;
     const setKey = (key:string, k:keyof typeof this.dir, v:boolean)=>{
       kb.on(`${v?'keydown':'keyup'}-${key}`, ()=> this.dir[k]=v);
@@ -167,16 +154,15 @@ export class MainScene extends Phaser.Scene {
     kb.on("keydown", (e: KeyboardEvent) => logKey("back", e.key));
     kb.on("keyup",   (e: KeyboardEvent) => logKey("forward",   e.key));
 
-    ["W:up","S:down","A:left","D:right","forward:up","DOWN:down","LEFT:left","RIGHT:right"]
-      .forEach(s=>{ const [k,n]=s.split(":") as [string, any]; setKey(k, n, true); setKey(k, n, false); });
-
-    // Mic
-    this.setupMic();
+    // Bullets group
+    this.bullets = this.physics.add.group({
+      classType: Bullet,
+      runChildUpdate: true,
+      maxSize: 600,
+    });
 
     // Enemy
     this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
-
-    // Random Position
     const ENEMY_COUNT = 6;
     for (let i = 0; i < ENEMY_COUNT; i++) {
       const randX = Phaser.Math.Between(100, this.W - 100);
@@ -184,11 +170,9 @@ export class MainScene extends Phaser.Scene {
       const e = new Enemy(this, randX, randY, this.getUniqueWord(this.words_enemy));
       this.enemies.add(e);
     }
-
-    // === 敵弾 ===
-    // === 視界チェック付き：敵の定期射撃 ===
+    // === Enemy Attack ===
     this.time.addEvent({
-      delay: 2000, // 判定は0.3秒ごと（軽量化しつつ反応は良く）
+      delay: 2000,
       loop: true,
       callback: () => {
         if (!this.player?.active) return;
@@ -197,16 +181,22 @@ export class MainScene extends Phaser.Scene {
           const e = enemyGO as Phaser.Physics.Arcade.Sprite;
           if (!e.active) return;
 
-          // 視程・視野角・遮蔽の3条件
           const canSee =
             this.inFOVAndRange(e.x, e.y, this.player.x, this.player.y, { fovDeg: 120, range: 700 }) &&
             this.hasLineOfSight(e.x, e.y, this.player.x, this.player.y);
 
           if (!canSee) return;
 
-          // 撃つ
-          const ang = Phaser.Math.RadToDeg(Phaser.Math.Angle.Between(e.x, e.y, this.player.x, this.player.y));
-          this.spawnBullet(e.x, e.y, ang, 220, 8, 2000, 300);
+          // Shoot
+          const ang = Phaser.Math.RadToDeg(
+            Phaser.Math.Angle.Between(e.x, e.y, this.player.x, this.player.y)
+          );
+          (e as any ).shoot(ang, {
+            speed: 220,
+            radius: 8,
+            lifespanMs: 2000,
+            armDelayMs: 300,
+          });
         });
       },
     });
@@ -272,39 +262,67 @@ export class MainScene extends Phaser.Scene {
 
       if (!canSee) return;
 
-        // 複数弾を放つ（扇状）
-        const numBullets = 6;
-        const baseDeg = Phaser.Math.RadToDeg(Phaser.Math.Angle.Between(this.boss.x, this.boss.y, this.player.x, this.player.y));
-        for (let i = 0; i < numBullets; i++) {
-          const a = baseDeg - 30 + (60 * i) / 5; // -30°〜+30°を6発
-          this.spawnBullet(this.boss.x, this.boss.y, a, 300, 8, 2500, 300);
-        }
+        const angle = Phaser.Math.RadToDeg(
+                Phaser.Math.Angle.Between(this.boss.x, this.boss.y,  this.player.x,  this.player.y)
+        );
+        this.boss.shootSpread(angle, 5, 30, {
+                speed: 400,
+                radius: 8,
+                lifespanMs: 1000,
+                armDelayMs: 300,
+        });
+        this.boss.setWeapon({ armDelayMs: 2500 }); // 0.5秒で武装完了
       },
     });
 
-    // 衝突判定
-    // 動的 × 静的
-    this.physics.add.collider(this.friendlies,  this.rocks);   // プレイヤーは岩で止まる
-    this.physics.add.collider(this.enemies, this.rocks);   // 敵も岩で止まる
-
+    // Collision
+    // Dynamic × Static
+    this.physics.add.collider(this.friendlies,  this.rocks); 
+    this.physics.add.collider(this.enemies, this.rocks);
+    
     // 4) 弾 × 岩（現状維持：弾だけ消える＝岩は不死）
     this.physics.add.collider(this.bullets, this.rocks, (bGO) => {
       (bGO as Bullet).takeDamage(1);
     });
 
-    // 5) 弾 × 弾
-    this.physics.add.collider(this.bullets, this.bullets, (aGO, bGO) => {
-      const a = aGO as Bullet, b = bGO as Bullet;
-      if (!a.active || !b.active) return;
-      // どちらかが未武装なら相殺しない
-      if (!a.isArmed() && !b.isArmed()) return;
+    // 5) Bullet × Bullet
+    this.physics.add.collider(
+      this.bullets,
+      this.bullets,
+      // onCollide: 相殺（両方消す）
+      (aGO, bGO) => {
+        const a = aGO as Bullet;
+        const b = bGO as Bullet;
+        // 片方が既に死んでいたら二重処理を避ける
+        if (!a.active || !b.active) return;
+        a.takeDamage?.(1);
+        b.takeDamage?.(1);
+      },
+      // process: 衝突させるかどうか判定
+      (aGO, bGO) => {
+        const a = aGO as Bullet;
+        const b = bGO as Bullet;
 
-      // 死亡前に効果音（種類：bullet_collision）
-      DeathFX.playSE(this, DeathFX.seKey("bullet_collision"), 0, 0.6);
+        // 無効・非表示はスキップ
+        if (!a.active || !b.active || !a.visible || !b.visible) return false;
 
-      a.takeDamage(1);
-      b.takeDamage(1);
-    });
+        // どちらか非武装なら衝突させない（初期重なり対策）
+        if (!a.isArmed?.() || !b.isArmed?.()) return false;
+
+        // 同一 owner (同じシューター) の弾同士は衝突させない
+        const ao = a.getOwner?.();
+        const bo = b.getOwner?.();
+        if (ao && bo && ao === bo) return false;
+
+        // 同一 faction の弾同士も衝突させない（例: "enemy" vs "enemy"）
+        const af = a.getData?.("faction");
+        const bf = b.getData?.("faction");
+        if (af && bf && af === bf) return false;
+
+        // ここまで来たら敵味方の弾。相殺させる
+        return true;
+      }
+    );
 
     // Enemy Collision
     this.physics.add.overlap(this.bullets, this.enemies, (bGO, eGO) => {
@@ -324,38 +342,13 @@ export class MainScene extends Phaser.Scene {
       b.takeDamage(1);
     });
 
+    this.setupMic();
+
+    this.registerInterruptHandlers();
   }
 
-  update(time:number) {
+  update() {
     const speed = 200;
-
-    // === tracking ===
-    if (this.navTargetRock && this.navTargetRock.active) {
-      const r = this.navTargetRock;
-      const rect = new Phaser.Geom.Rectangle(r.x - r.width/2, r.y - r.height/2, r.width, r.height);
-
-      // the nearlest rock
-      const cx = Phaser.Math.Clamp(this.player.x, rect.left,  rect.right);
-      const cy = Phaser.Math.Clamp(this.player.y, rect.top,   rect.bottom);
-      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, cx, cy);
-
-      // ★ arrives nearly
-      if (dist <= 6) { 
-        this.onArrived(r);
-      } else {
-        // tracking movement
-        this.physics.moveTo(this.player, cx, cy, 200);
-
-        const vx = (this.player.body as Phaser.Physics.Arcade.Body).velocity.x;
-        const vy = (this.player.body as Phaser.Physics.Arcade.Body).velocity.y;
-        if (Math.abs(vx) > Math.abs(vy)) this.facing = vx > 0 ? "right" : "left";
-        else                              this.facing = vy > 0 ? "back"  : "forward";
-        this.player.play(`walk-${this.facing}`, true);
-
-        return;
-      }
-    }
-
     const left    = (this.cursors.left?.isDown  || this.wasd.A.isDown   || this.dir.left);
     const right   = (this.cursors.right?.isDown || this.wasd.D.isDown   || this.dir.right);
     const forward = (this.cursors.up?.isDown    || this.wasd.W.isDown   || this.dir.forward);
@@ -363,6 +356,7 @@ export class MainScene extends Phaser.Scene {
 
     // 速度初期化
     for (const friendly of this.friendlies.getChildren()) {
+      if ((friendly as any).isAutoMoving?.()) continue; // ★自動移動を尊重
       friendly.setVelocity(0);
       // 入力に応じて速度・向き設定（斜めは最後に押された軸を優先したい場合は工夫可）
       let moving = false;
@@ -381,8 +375,6 @@ export class MainScene extends Phaser.Scene {
       }
     }
 
-    // 連射（マイクで“shoot”連呼された場合の簡易クールダウン）
-    if (time - this.lastShot < this.shootCooldown) return;
   }
 
   // ==== ユーティリティ: 歩行アニメを作る ====
@@ -408,40 +400,53 @@ export class MainScene extends Phaser.Scene {
     btn.onclick = () => {
       if (!running) {
         asr.start((text, isFinal) => {
+          const lower = text.toLowerCase();
           if (!isFinal) { stat.textContent = "mic: listening…"; return; }
-          const t = text.toLowerCase();
-
-          // setupMic() の中
-          for (const enemy of this.enemies.getChildren()) {
-            const name = (enemy as Phaser.Physics.Arcade.Sprite).getData("name");
-            if (t.includes(name)) {
-              logger.cmd(`voice: attack ${name}`);
-              this.shootSpread(enemy as Phaser.Physics.Arcade.Sprite);
-              return;
+          // === ターゲット名検出 ===
+          this.enemies.children.each((enemyGO: Phaser.GameObjects.GameObject) => {
+            const enemy = enemyGO as Enemy;
+            const name = enemy.displayName.toLowerCase();
+            if (lower.includes(name)) {
+              logger.cmd(`🎯 "${name}" detected by voice!`);
+              // 散弾発射
+              const angle = Phaser.Math.RadToDeg(
+                Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y)
+              );
+              this.player.shootSpread(angle, 5, 30, {
+                speed: 400,
+                radius: 8,
+                lifespanMs: 1000,
+                armDelayMs: 300,
+              });
             }
-          }
-          for (const rock of this.rocks.getChildren()) {
-            const name = (rock as Phaser.GameObjects.Rectangle).getData("name");
-            if (t.includes(name)) {
-              logger.cmd(`voice: move to ${name}`);
-              // this.moveToTarget(rock as Phaser.GameObjects.Rectangle);
-              this.moveToRock(rock as Phaser.GameObjects.Rectangle);
-              return;
-            }
-          }
+          });
 
-          logger.cmd(`voice: ${t}`);
+          this.rocks.children.each((obj: Phaser.GameObjects.GameObject) => {
+            const rock = obj as Rock;
+            const rockName = (rock.getData("name") as string).toLowerCase();
+            if (lower.includes(rockName)) {
+              logger.cmd(`Voice detected rock "${rockName}"`);
+              this.player.moveToRock(rock);
+            }
+          });
+
+          logger.cmd(`voice: ${lower}`);
 
           // 移動（押下状態を切替）
-          if (/\bforward\b/.test(t)) { set("forward", true);  set("back",false); set("left",false); set("right",false); }
-          if (/\bback\b/.test(t))    { set("forward", false); set("back",true);  set("left",false); set("right",false); }
-          if (/\bleft\b/.test(t))    { set("forward", false); set("back",false); set("left",true);  set("right",false); }
-          if (/\bright\b/.test(t))   { set("forward", false); set("back",false); set("left",false); set("right",true); }
-          if (/\bstop\b/.test(t))    { set("forward", false); set("back",false); set("left",false); set("right",false); }
+          if (/\bforward\b/.test(lower)) { set("forward", true);  set("back",false); set("left",false); set("right",false); }
+          if (/\bback\b/.test(lower))    { set("forward", false); set("back",true);  set("left",false); set("right",false); }
+          if (/\bleft\b/.test(lower))    { set("forward", false); set("back",false); set("left",true);  set("right",false); }
+          if (/\bright\b/.test(lower))   { set("forward", false); set("back",false); set("left",false); set("right",true); }
+          if (/\bstop\b/.test(lower))    { set("forward", false); set("back",false); set("left",false); set("right",false); }
 
           // “shoot” 単独なら最後に動いた向きへ
-          if (/\bshoot\b/.test(t) && !/\bshoot (left|right|forward|back)\b/.test(t)) {
-            this.shoot();
+          if (/\bshoot\b/.test(lower) && !/\bshoot (left|right|forward|back)\b/.test(lower)) {
+            this.player.shoot(this.player.direction, {
+              speed: 400,
+              radius: 8,
+              lifespanMs: 1000,
+              armDelayMs: 300,
+            });
           }
         });
         running = true; btn.textContent = "⏹ Stop mic"; stat.textContent = "mic: listening…";
@@ -452,9 +457,8 @@ export class MainScene extends Phaser.Scene {
 
   }
 
-  // === LoS / FOV / Range 判定 ===
+  // === LoS / FOV / Range ===
   private hasLineOfSight(ax: number, ay: number, bx: number, by: number): boolean {
-    // 岩に遮られていないか判定
     const ray = new Phaser.Geom.Line(ax, ay, bx, by);
     let blocked = false;
     this.rocks.children.iterate((go: Phaser.GameObjects.GameObject) => {
@@ -484,38 +488,13 @@ export class MainScene extends Phaser.Scene {
     return Math.abs(angDiff) <= fovDeg * 0.5;
   }
 
-  private shootSpread(target: Phaser.Physics.Arcade.Sprite) {
-    const num = 5;
-    const base = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y);
-    for (let i = 0; i < num; i++) {
-      const angle = Phaser.Math.RadToDeg(base - 0.2 + 0.4 * (i / (num - 1)));
-      this.spawnBullet(this.player.x, this.player.y, angle, 400, 8, 3000, 600);
-    }
-  }
-
   private getUniqueWord(pool: string[]): string {
     if (pool.length === 0) return "none";
     const i = Phaser.Math.Between(0, pool.length - 1);
     return pool.splice(i, 1)[0];
   }
-  private moveToRock(target: Phaser.GameObjects.Rectangle) {
-    this.dir.forward = this.dir.back = this.dir.left = this.dir.right = false;
-    this.navTargetRock = target;
-    logger.info(`Move: heading to rock "${target.getData("name")}"`);
-  }
 
-  private onArrived(r: Phaser.GameObjects.Rectangle) {
-    this.player.setVelocity(0);
-    // 念のため移動入力をクリア
-    this.dir.forward = this.dir.back = this.dir.left = this.dir.right = false;
-
-    const arrivedName = r.getData("name") || "rock";
-    logger.info(`Arrived: touched target "${arrivedName}"`);
-    this.navTargetRock = null;
-  }
-
-  // 1) spawnBullet の定義を置換
-  private spawnBullet(
+  public spawnBullet(
     x: number, y: number,
     angleDeg: number,
     speed = 500,
@@ -535,11 +514,37 @@ export class MainScene extends Phaser.Scene {
     return b;
   }
 
-  // 2) プレイヤー発射（team引数削除）
-  private shoot() {
-    const px = this.player.x, py = this.player.y;
-    const angleDeg = this.player.direction; // 0/90/180/270 degree
-    this.spawnBullet(px, py, angleDeg, 400, 8, 1000, 300);
+  private registerInterruptHandlers() {
+    this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
+      if (this.player.isAutoMoving()) {
+        this.player.interruptAutoMove();
+      }
+    });
+
   }
 
+  // メソッド追加
+  private triggerGameResults(reason: "defeated" | "timeout" | "fell") {
+    // 多重呼び出し防止
+    if ((this as any).__GameResultsFired) return;
+    (this as any).__GameResultsFired = true;
+
+    // 入力・物理停止／BGM停止
+    this.input.keyboard?.enabled && (this.input.keyboard.enabled = false);
+    this.physics.world.isPaused || this.physics.pause();
+    this.bgm?.stop();
+
+    // 画面フェードしてから遷移
+    const startAt = this.time.now;
+    this.cameras.main.fade(400, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.start("GameResultsScene", {
+        reason,
+        // 必要ならスコアや経過時間などを詰める
+        timeMs: this.time.now - startAt,
+        score: (this as any).score ?? 0,
+      });
+    });
+  }
+  
 }

@@ -1,5 +1,8 @@
+// app/src/entities/Base.ts
 import Phaser from "phaser";
 import { DeathFX } from "../effects/DeathFX";
+import type { DeathKind } from "../effects/DeathFX";
+import { syncHitboxToDisplay as syncHB } from "../utils/hitbox";
 
 export type BaseOptions = {
   scale?: number;
@@ -8,14 +11,16 @@ export type BaseOptions = {
   showLabel?: boolean;
   labelDepth?: number;
   drawHitbox?: boolean;
+  hitboxShape?: "circle" | "rect";
+  hitboxScale?: number;
+  hitboxPadding?: number;
 };
 
 export class Base extends Phaser.Physics.Arcade.Sprite {
-  static DEBUG_HITBOXES = true;
-  protected maxHp = 1;
-  protected hp = 1;
+  public maxHp = 1;
+  public hp = 1;
+
   protected nameTag?: Phaser.GameObjects.Text;
-  protected hitboxGfx?: Phaser.GameObjects.Graphics;
   protected opts: Required<BaseOptions>;
 
   constructor(
@@ -37,6 +42,9 @@ export class Base extends Phaser.Physics.Arcade.Sprite {
       showLabel: options.showLabel ?? true,
       labelDepth: options.labelDepth ?? 100,
       drawHitbox: options.drawHitbox ?? true,
+      hitboxShape: options.hitboxShape ?? "circle",
+      hitboxScale: options.hitboxScale ?? 1.0,
+      hitboxPadding: options.hitboxPadding ?? 0,
     };
 
     this.maxHp = maxHp;
@@ -49,34 +57,29 @@ export class Base extends Phaser.Physics.Arcade.Sprite {
     if (this.opts.scale !== 1) this.setScale(this.opts.scale);
 
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setImmovable(this.opts.immovable);
-    this.setCollideWorldBounds(this.opts.collideWorldBounds);
+    body.setImmovable(!!this.opts.immovable);
+    body.setCollideWorldBounds(!!this.opts.collideWorldBounds);
 
     this.syncHitboxToDisplay();
 
-    if (this.opts.showLabel && this.displayName) {
-      this.nameTag = scene.add.text(this.x, this.y, this.displayName, {
-        font: "14px monospace",
+    if (this.opts.showLabel) {
+      this.nameTag = scene.add.text(this.x, this.y - this.displayHeight * 0.5 - 8, this.displayName, {
+        fontSize: "12px",
         color: "#fff",
         stroke: "#000",
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5, 1)
-      .setDepth(this.opts.labelDepth);
+        strokeThickness: 2,
+      }).setDepth(this.opts.labelDepth);
     }
-
-    this.hitboxGfx = scene.add.graphics().setDepth(10000);
   }
 
   protected syncHitboxToDisplay() {
     const body = this.body as Phaser.Physics.Arcade.Body;
-    const w = Math.max(1, Math.round(this.displayWidth));
-    const h = Math.max(1, Math.round(this.displayHeight));
-    body.setSize(w, h, true);
-  }
-
-  public isArmed(): boolean {
-    return false;
+    if (!body) return;
+    syncHB(this as any, {
+      hitboxShape: this.opts.hitboxShape,
+      scaleFactor: this.opts.hitboxScale,
+      padding: this.opts.hitboxPadding,
+    });
   }
 
   setScale(x: number, y?: number): this {
@@ -91,11 +94,6 @@ export class Base extends Phaser.Physics.Arcade.Sprite {
     return this;
   }
 
-  public setHitboxSize(width: number, height: number) {
-    const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(Math.max(1, Math.round(width)), Math.max(1, Math.round(height)), true);
-  }
-
   /** HPを減算し、0以下なら死ぬ */
   public takeDamage(n = 1) {
     this.hp = Math.max(0, this.hp - n);
@@ -108,22 +106,30 @@ export class Base extends Phaser.Physics.Arcade.Sprite {
   }
 
   protected die() {
-    // ① 再入防止
+    // 再入防止
     if (this.getData("__dying")) return;
     this.setData("__dying", true);
 
     this.nameTag?.destroy();
-    this.hitboxGfx?.destroy();
 
-    const kind = (this.getData("kind") as "player"|"enemy"|"boss") ?? "enemy";
+    // kind フォールバックを強化（未設定や想定外でも "enemy" に統一）
+    const raw = this.getData("kind");
+    const kind: DeathKind =
+      raw === "player" ||
+      raw === "enemy" ||
+      raw === "boss" ||
+      raw === "bullet_timeout" ||
+      raw === "bullet_collision"
+        ? (raw as DeathKind)
+        : "enemy";
+    if (raw !== kind) this.setData("kind", kind);
 
-    // ② まず即時に無効化して preUpdate からもう呼ばれないようにする
+    // 即時無効化
     this.setActive(false).setVisible(false);
     const body = this.body as Phaser.Physics.Arcade.Body | undefined;
     if (body) body.enable = false;
 
-    // ③ 破棄は DeathFX 側に任せる（ここで destroy しない！）
-    //    DeathFX.play は tween 完了時に destroy する実装に統一
+    // エフェクト発火（破棄は DeathFX 側で）
     DeathFX.play(this.scene, this as unknown as Phaser.GameObjects.Sprite, kind);
   }
 
@@ -137,13 +143,6 @@ export class Base extends Phaser.Physics.Arcade.Sprite {
 
     if (this.nameTag && this.active) {
       this.nameTag.setPosition(this.x, this.y - this.displayHeight * 0.5 - 8);
-    }
-
-    if (this.hitboxGfx && Base.DEBUG_HITBOXES && this.opts.drawHitbox) {
-      const body = this.body as Phaser.Physics.Arcade.Body;
-      this.hitboxGfx.clear();
-      this.hitboxGfx.lineStyle(1, 0x00ff00, 0.9);
-      this.hitboxGfx.strokeRect(body.x, body.y, body.width, body.height);
     }
   }
 }
