@@ -4,20 +4,23 @@
 
 
 ## Commands
-- Forward
-- Back
-- Right
-- Left
-- Light
-- Play
-- Pray
-- Stay
-- Stop
-- Run
-- Learn
-- Lock
-- Rock
-- etc
+| command | description | implement |
+| :--- | :--- | :--- |
+| Forward | | 
+| Back | | 
+| Right | | 
+| Left | | 
+| Light | | 
+| Play | | 
+| Pray | | 
+| Stay | | 
+| Stop | | 
+| Run | | 
+| Learn | | 
+| Lock | | 
+| Rock | | 
+
+etc
 
 [![CI](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/ci.yml/badge.svg)](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/ci.yml)
 [![Python Lint](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/lint.yml/badge.svg)](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/lint.yml)
