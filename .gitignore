@@ -56,3 +56,4 @@ frontend/app/.jest-cache/
 
 # mat
 mat/
+vite_*.md
