@@ -7,20 +7,21 @@ The gameplay model is based on Fire and Movement. Two magical girls take turns s
 ## Commands
 | command | description | implement |
 | :--- | :--- | :--- |
-| Forward | | 
-| Back | | 
-| Right | | 
-| Left | | 
-| Light | | 
-| Play | | 
-| Pray | | 
-| Stay | | 
-| Stop | | 
-| Run | | 
-| Learn | | 
-| Lock | | 
-| Rock | | 
-
+| Forward | | done | 
+| Back || done | 
+| Right | | done | 
+| Left | | done | 
+| Light | | | 
+| Play | | | 
+| Pray | | | 
+| Stay | | | 
+| Stop | | | 
+| Run | | | 
+| Learn | | | 
+| Lock | | | 
+| Rock | | | 
+| Enemy name | | done | 
+| Rock name | | done | 
 etc
 
 [![CI](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/ci.yml/badge.svg)](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/ci.yml)
