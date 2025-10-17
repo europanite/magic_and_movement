@@ -70,7 +70,16 @@ export class TitleScene extends Phaser.Scene {
     const labelSize = Math.max(16, Math.round(buttonHeight * 0.42));
 
     const startBtn = this.makeButton(w / 2, menuY, buttonWidth, buttonHeight, "▶ Start", () => this.startGame(), labelSize);
-    const optionsBtn = this.makeButton(w / 2, menuY + (buttonHeight + spacing), buttonWidth, buttonHeight, "Options", () => this.flashHint(), labelSize);
+
+    const optionsBtn = this.makeButton(
+      w / 2,
+      menuY + (buttonHeight + spacing),
+      buttonWidth,
+      buttonHeight,
+      "Options",
+      () => this.scene.start("OptionScene"),
+      labelSize
+    );
 
     this.uiContainer.add([startBtn, optionsBtn]);
 
@@ -87,7 +96,8 @@ export class TitleScene extends Phaser.Scene {
 
     const start = () => this.startGame();
     this.input.keyboard!.on("keydown-SPACE", start);
-    this.input.on("pointerdown", start);
+    this.hintText.setInteractive({ useHandCursor: true })
+      .on("pointerup", start);
 
     this.scale.on("resize", (gameSize: Phaser.Structs.Size) => {
       const { width, height } = gameSize;

@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { TitleScene } from "./scenes/TitleScene";
 import { MainScene } from "./scenes/MainScene";
+import { OptionScene } from "./scenes/OptionScene";
 import { GameResultsScene } from "./scenes/GameResultsScene";
 import { logger } from "./logger"
 
@@ -16,7 +17,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: BASE_H,
   backgroundColor: "#20242a",
   physics: { default: "arcade", arcade: { debug: true } },
-  scene: [TitleScene, MainScene, GameResultsScene],
+  scene: [TitleScene, OptionScene, MainScene, GameResultsScene],
   scale: {
     mode: Phaser.Scale.FIT,
     // autoCenter: Phaser.Scale.CENTER_BOTH
