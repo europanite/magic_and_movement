@@ -65,8 +65,8 @@ export class MainScene extends Phaser.Scene {
   private W = 1200;
   private H = 900;
   private Max_H = 2400;
-  private X_PLAYER = this.W/2;
-  private Y_PLAYER = this.Max_H - this.H/2;
+  private X_FRIENDLY = this.W/2;
+  private Y_FRIENDLY = this.Max_H - this.H/2;
 
   constructor(){
     super("MainScene");
@@ -107,8 +107,8 @@ export class MainScene extends Phaser.Scene {
     this.friendlies = this.physics.add.group({ classType: Friendly, runChildUpdate: true });
     this.friendly = new Friendly(
       this, 
-      this.X_Friendly,
-      this.Y_Friendly,
+      this.X_FRIENDLY,
+      this.Y_FRIENDLY,
       "you",
       5);
 
