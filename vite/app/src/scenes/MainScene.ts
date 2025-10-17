@@ -276,7 +276,16 @@ export class MainScene extends Phaser.Scene {
 
     // Collision
     // Dynamic × Static
-    this.physics.add.collider(this.friendlies,  this.rocks); 
+    // this.physics.add.collider(this.friendlies,  this.rocks); 
+    this.physics.add.collider(this.player, this.rocks, (_pGO, rGO) => {
+      const rock = rGO as Rock;
+      // stop ONLY when the touched rock is the current target
+      if (this.player.isAutoMoving() && this.player.getTargetRock() === rock) {
+        this.player.stopAutoMove();
+        // make 100% sure we don't keep sliding this frame
+        (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      }
+    });
     this.physics.add.collider(this.enemies, this.rocks);
     
     // 4) Bullet × Rock
