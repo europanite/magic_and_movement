@@ -16,10 +16,10 @@ export class OptionScene extends Phaser.Scene {
     const w = this.scale.width;
     const h = this.scale.height;
 
-    // 背景
+    // Background
     this.add.rectangle(0, 0, w * 2, h * 2, 0x0b0f16, 1).setOrigin(0);
 
-    // タイトル
+    // Title
     this.add.text(w / 2, h * 0.18, "Options", {
       fontFamily: "system-ui, monospace",
       fontSize: "56px",

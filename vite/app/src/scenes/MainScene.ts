@@ -396,12 +396,12 @@ export class MainScene extends Phaser.Scene {
       if (!running) {
         asr.start((text, isFinal) => {
           const lower = text.toLowerCase();
+          logger.cmd(`🎯  MIC: "${text}"`);
           if (!isFinal) { stat.textContent = "mic: listening…"; return; }
           this.enemies.children.each((enemyGO: Phaser.GameObjects.GameObject) => {
             const enemy = enemyGO as Enemy;
             const name = enemy.displayName.toLowerCase();
             if (lower.includes(name)) {
-              logger.cmd(`🎯 "${name}" detected by voice!`);
               const angle = Phaser.Math.RadToDeg(
                 Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y)
               );
