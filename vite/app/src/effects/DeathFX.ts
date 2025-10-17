@@ -1,17 +1,17 @@
 // app/src/effects/DeathFX.ts
 import Phaser from "phaser";
 
-export type DeathKind = "player" | "enemy" | "boss" | "bullet_timeout" | "bullet_collision";
+export type DeathKind = "friendly" | "enemy" | "boss" | "bullet_timeout" | "bullet_collision";
 
 function isDeathKind(v: any): v is DeathKind {
-  return v === "player" || v === "enemy" || v === "boss" || v === "bullet_timeout" || v === "bullet_collision";
+  return v === "friendly" || v === "enemy" || v === "boss" || v === "bullet_timeout" || v === "bullet_collision";
 }
 
 export class DeathFX {
   /** 種類別の推奨SEキー（★ default を用意） */
   static seKey(kind: DeathKind): string {
     switch (kind) {
-      case "player":           return "se_player_die";
+      case "friendly":           return "se_friendly_die";
       case "boss":             return "se_boss_die";
       case "enemy":            return "se_enemy_die";
       case "bullet_timeout":   return "se_bullet_timeout";
@@ -79,11 +79,11 @@ export class DeathFX {
     const kind: DeathKind = isDeathKind(rawKind) ? rawKind : "enemy";
 
     // 1) SE
-    this.playSE(scene, this.seKey(kind), kind === "boss" ? -200 : 0, kind === "player" ? 0.9 : 0.7);
+    this.playSE(scene, this.seKey(kind), kind === "boss" ? -200 : 0, kind === "friendly" ? 0.9 : 0.7);
 
     // 2) 放射スプライト（色味を種類で少し変える）
     const tint =
-      kind === "player" ? 0x80d0ff :
+      kind === "friendly" ? 0x80d0ff :
       kind === "boss"   ? 0xff8080 :
       0xffe080;
     this.burstParticles(scene, sprite.x, sprite.y, tint);

@@ -4,14 +4,14 @@ import { logger } from "../logger";
 import { Rock } from "../entities/Rock";
 import { Enemy } from "../entities/Enemy";
 import { Boss } from "../entities/Boss";
-import { Player } from "../entities/Player";
+import { Friendly } from "../entities/Friendly";
 import { Bullet } from '../entities/Bullet';
 import { SoundManager } from "../audio/SoundManager";
 
 
 
 export class MainScene extends Phaser.Scene {
-  private player!: Player;
+  private friendly!: Friendly;
   private boss!: Boss;
   private bullets!: Phaser.Physics.Arcade.Group; 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -73,12 +73,12 @@ export class MainScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.spritesheet('player', 'images/witch_sheet.png', {frameWidth: MainScene.FRAME_W,frameHeight: MainScene.FRAME_H,},);
+    this.load.spritesheet('friendly', 'images/witch_sheet.png', {frameWidth: MainScene.FRAME_W,frameHeight: MainScene.FRAME_H,},);
     this.load.spritesheet('enemy', 'images/enemy_sheet.png', {frameWidth: MainScene.FRAME_W,frameHeight: MainScene.FRAME_H,},);
     this.load.spritesheet('boss', 'images/enemy_sheet.png', {frameWidth: MainScene.FRAME_W,frameHeight: MainScene.FRAME_H,});
     this.load.image("bullet", "images/bullet.png");
     this.load.audio("bgm_main", "audio/bgm.mp3");
-    this.load.audio("se_player_die", "audio/character_destroy.mp3");
+    this.load.audio("se_friendly_die", "audio/character_destroy.mp3");
     this.load.audio("se_enemy_die",  "audio/character_destroy.mp3");
     this.load.audio("se_boss_die",   "audio/character_destroy.mp3");
     this.load.audio("se_bullet_fire",     "audio/bullet_timeout.mp3");
@@ -103,21 +103,21 @@ export class MainScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, this.W, this.Max_H);
     this.physics.world.setBounds(0, 0, this.W, this.Max_H);
 
-    // Player
-    this.friendlies = this.physics.add.group({ classType: Player, runChildUpdate: true });
-    this.player = new Player(
+    // Friendly
+    this.friendlies = this.physics.add.group({ classType: Friendly, runChildUpdate: true });
+    this.friendly = new Friendly(
       this, 
-      this.X_PLAYER,
-      this.Y_PLAYER,
+      this.X_Friendly,
+      this.Y_Friendly,
       "you",
       5);
 
     // Check destructions
-    this.player.once(Phaser.GameObjects.Events.DESTROY, () => {
+    this.friendly.once(Phaser.GameObjects.Events.DESTROY, () => {
       this.triggerGameResults("defeated");
     });
 
-    this.friendlies.add(this.player);
+    this.friendlies.add(this.friendly);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.wasd = {
@@ -136,7 +136,7 @@ export class MainScene extends Phaser.Scene {
   
     // Shoot
     this.input.keyboard!.on('keydown-SPACE', () => {
-      this.player.shoot(this.player.direction, {
+      this.friendly.shoot(this.friendly.direction, {
         speed: 400,
         radius: 8,
         lifespanMs: 1000,
@@ -144,9 +144,9 @@ export class MainScene extends Phaser.Scene {
       });
     });
 
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.startFollow(this.friendly, true, 0.1, 0.1);
 
-    // Player Input
+    // Friendly Input
     const kb = this.input.keyboard!;
     const setKey = (key:string, k:keyof typeof this.dir, v:boolean)=>{
       kb.on(`${v?'keydown':'keyup'}-${key}`, ()=> this.dir[k]=v);
@@ -176,21 +176,21 @@ export class MainScene extends Phaser.Scene {
       delay: 2000,
       loop: true,
       callback: () => {
-        if (!this.player?.active) return;
+        if (!this.friendly?.active) return;
 
         this.enemies.children.each((enemyGO: Phaser.GameObjects.GameObject) => {
           const e = enemyGO as Phaser.Physics.Arcade.Sprite;
           if (!e.active) return;
 
           const canSee =
-            this.inFOVAndRange(e.x, e.y, this.player.x, this.player.y, { fovDeg: 120, range: 700 }) &&
-            this.hasLineOfSight(e.x, e.y, this.player.x, this.player.y);
+            this.inFOVAndRange(e.x, e.y, this.friendly.x, this.friendly.y, { fovDeg: 120, range: 700 }) &&
+            this.hasLineOfSight(e.x, e.y, this.friendly.x, this.friendly.y);
 
           if (!canSee) return;
 
           // Shoot
           const ang = Phaser.Math.RadToDeg(
-            Phaser.Math.Angle.Between(e.x, e.y, this.player.x, this.player.y)
+            Phaser.Math.Angle.Between(e.x, e.y, this.friendly.x, this.friendly.y)
           );
           (e as any ).shoot(ang, {
             speed: 220,
@@ -210,7 +210,7 @@ export class MainScene extends Phaser.Scene {
     const MIN_H = 24, MAX_HH = 96;
     const SAFE_RADIUS = 140;
 
-    const playerSpawn = new Phaser.Math.Vector2(this.player.x, this.player.y);
+    const friendlySpawn = new Phaser.Math.Vector2(this.friendly.x, this.friendly.y);
     const placed: Phaser.Geom.Rectangle[] = [];
 
     const placeRock = (rx: number, ry: number, rw: number, rh: number) => {
@@ -230,7 +230,7 @@ export class MainScene extends Phaser.Scene {
         const rx = Phaser.Math.Between(60 + rw/2, this.W - 60 - rw/2);
         const ry = Phaser.Math.Between(200 + rh/2, this.Max_H - 200 - rh/2);
 
-        if (playerSpawn.distance(new Phaser.Math.Vector2(rx, ry)) < SAFE_RADIUS) continue;
+        if (friendlySpawn.distance(new Phaser.Math.Vector2(rx, ry)) < SAFE_RADIUS) continue;
 
         const cand = new Phaser.Geom.Rectangle(rx - rw/2, ry - rh/2, rw, rh);
         const is_overlaps = placed.some(r => Phaser.Geom.Rectangle.Overlaps(r, cand));
@@ -256,13 +256,13 @@ export class MainScene extends Phaser.Scene {
 
       // visibility
       const canSee =
-        this.inFOVAndRange(this.boss.x, this.boss.y, this.player.x, this.player.y, { fovDeg: 120, range: 700 }) &&
-        this.hasLineOfSight(this.boss.x, this.boss.y, this.player.x, this.player.y);
+        this.inFOVAndRange(this.boss.x, this.boss.y, this.friendly.x, this.friendly.y, { fovDeg: 120, range: 700 }) &&
+        this.hasLineOfSight(this.boss.x, this.boss.y, this.friendly.x, this.friendly.y);
 
       if (!canSee) return;
 
         const angle = Phaser.Math.RadToDeg(
-                Phaser.Math.Angle.Between(this.boss.x, this.boss.y,  this.player.x,  this.player.y)
+                Phaser.Math.Angle.Between(this.boss.x, this.boss.y,  this.friendly.x,  this.friendly.y)
         );
         this.boss.shootSpread(angle, 5, 30, {
                 speed: 400,
@@ -275,24 +275,19 @@ export class MainScene extends Phaser.Scene {
     });
 
     // Collision
-    // Dynamic × Static
-    // this.physics.add.collider(this.friendlies,  this.rocks); 
-    this.physics.add.collider(this.player, this.rocks, (_pGO, rGO) => {
+    // Friendly × Rock
+    this.physics.add.collider(this.friendly, this.rocks, (_pGO, rGO) => {
       const rock = rGO as Rock;
       // stop ONLY when the touched rock is the current target
-      if (this.player.isAutoMoving() && this.player.getTargetRock() === rock) {
-        this.player.stopAutoMove();
-        // make 100% sure we don't keep sliding this frame
-        (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      if (this.friendly.isAutoMoving() && this.friendly.getTargetRock() === rock) {
+        this.friendly.stopAutoMove();
+        (this.friendly.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
       }
     });
+    // enemies × Rock
     this.physics.add.collider(this.enemies, this.rocks);
     
     // 4) Bullet × Rock
-    // this.physics.add.collider(this.bullets, this.rocks, (bGO) => {
-    //   (bGO as Bullet).takeDamage(1);
-    // });
-
     this.physics.add.collider(this.bullets, this.rocks, (b: Bullet, r: Rock) => {
       if (!b.active || !r.active) return;
       // Bullet 側は private vanishAs を持つので、共通口の takeDamage で消す
@@ -341,12 +336,12 @@ export class MainScene extends Phaser.Scene {
       b.takeDamage(1);
     });
 
-    // Player Collision
+    // Friendly Collision
     this.physics.add.overlap(this.bullets, this.friendlies, (bGO, pGO) => {
       const b = bGO as Bullet;
       if (!b.isArmed()) return;
       (pGO as any).takeDamage?.(1);
-      logger.cmd(`Player Hit`)
+      logger.cmd(`Friendly Hit`)
       b.takeDamage(1);
     });
 
@@ -385,7 +380,7 @@ export class MainScene extends Phaser.Scene {
   private makeWalkAnim(key: string, frames: number[]) {
     this.anims.create({
       key,
-      frames: frames.map((f) => ({ key: "player", frame: f })),
+      frames: frames.map((f) => ({ key: "friendly", frame: f })),
       frameRate: 8,
       repeat: -1,
     });
@@ -412,9 +407,9 @@ export class MainScene extends Phaser.Scene {
             const name = enemy.displayName.toLowerCase();
             if (lower.includes(name)) {
               const angle = Phaser.Math.RadToDeg(
-                Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y)
+                Phaser.Math.Angle.Between(this.friendly.x, this.friendly.y, enemy.x, enemy.y)
               );
-              this.player.shootSpread(angle, 5, 30, {
+              this.friendly.shootSpread(angle, 5, 30, {
                 speed: 400,
                 radius: 8,
                 lifespanMs: 1000,
@@ -428,7 +423,7 @@ export class MainScene extends Phaser.Scene {
             const rockName = (rock.getData("name") as string).toLowerCase();
             if (lower.includes(rockName)) {
               logger.cmd(`Voice detected rock "${rockName}"`);
-              this.player.moveToRock(rock);
+              this.friendly.moveToRock(rock);
             }
           });
 
@@ -442,7 +437,7 @@ export class MainScene extends Phaser.Scene {
           if (/\bstop\b/.test(lower))    { set("forward", false); set("back",false); set("left",false); set("right",false); }
 
           if (/\bshoot\b/.test(lower) && !/\bshoot (left|right|forward|back)\b/.test(lower)) {
-            this.player.shoot(this.player.direction, {
+            this.friendly.shoot(this.friendly.direction, {
               speed: 400,
               radius: 8,
               lifespanMs: 1000,
@@ -480,9 +475,9 @@ export class MainScene extends Phaser.Scene {
     const dist = Math.hypot(dx, dy);
     if (dist > range) return false;
 
-    const angleToPlayer = Phaser.Math.Angle.Normalize(Math.atan2(dy, dx));
-    const angleForward  = angleToPlayer;
-    const angDiff = Phaser.Math.RadToDeg(Phaser.Math.Angle.Wrap(angleToPlayer - angleForward));
+    const angleToFriendly = Phaser.Math.Angle.Normalize(Math.atan2(dy, dx));
+    const angleForward  = angleToFriendly;
+    const angDiff = Phaser.Math.RadToDeg(Phaser.Math.Angle.Wrap(angleToFriendly - angleForward));
     return Math.abs(angDiff) <= fovDeg * 0.5;
   }
 
@@ -514,8 +509,8 @@ export class MainScene extends Phaser.Scene {
 
   private registerInterruptHandlers() {
     this.input.keyboard!.on('keydown', (e: KeyboardEvent) => {
-      if (this.player.isAutoMoving()) {
-        this.player.interruptAutoMove();
+      if (this.friendly.isAutoMoving()) {
+        this.friendly.interruptAutoMove();
       }
     });
 

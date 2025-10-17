@@ -1,10 +1,9 @@
-// app/src/entities/Player.ts
 import Phaser from "phaser";
 import { CharacterBase } from "./CharacterBase";
 import { logger } from "../logger";
 import { Rock } from "./Rock";
 
-export class Player extends CharacterBase {
+export class Friendly extends CharacterBase {
   public direction: number = 90;
 
   private moveTarget: Phaser.Math.Vector2 | null = null;
@@ -15,11 +14,11 @@ export class Player extends CharacterBase {
   private clampEnabled = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, name = "you", maxHp = 5) {
-    super(scene, x, y, "player", 0, name, maxHp, {
-      sounds: { death: "se_player_die" },
+    super(scene, x, y, "friendly", 0, name, maxHp, {
+      sounds: { death: "se_friendly_die" },
       collideWorldBounds: true,
     });
-    this.setData("kind", "player");
+    this.setData("kind", "friendly");
   }
 
   /** Begin auto-navigation toward the rock center. */

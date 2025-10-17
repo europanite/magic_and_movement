@@ -115,7 +115,7 @@ export class Base extends Phaser.Physics.Arcade.Sprite {
     // kind フォールバックを強化（未設定や想定外でも "enemy" に統一）
     const raw = this.getData("kind");
     const kind: DeathKind =
-      raw === "player" ||
+      raw === "friendly" ||
       raw === "enemy" ||
       raw === "boss" ||
       raw === "bullet_timeout" ||

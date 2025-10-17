@@ -154,7 +154,7 @@ export class CharacterBase extends Base {
 
     this.nameTag?.destroy();
 
-    const kind = (this.getData("kind") as "player" | "enemy" | "boss") ?? "enemy";
+    const kind = (this.getData("kind") as "friendly" | "enemy" | "boss") ?? "enemy";
 
     this.setActive(false).setVisible(false);
     const body = this.body as Phaser.Physics.Arcade.Body | undefined;
@@ -166,7 +166,7 @@ export class CharacterBase extends Base {
       this.scene,
       this.x,
       this.y,
-      kind === "player" ? 0x80d0ff : kind === "boss" ? 0xff8080 : 0xffe080
+      kind === "friendly" ? 0x80d0ff : kind === "boss" ? 0xff8080 : 0xffe080
     );
     this.scene.cameras.main.shake(kind === "boss" ? 200 : 120, kind === "boss" ? 0.01 : 0.006);
 
