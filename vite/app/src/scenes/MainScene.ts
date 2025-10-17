@@ -8,6 +8,8 @@ import { Player } from "../entities/Player";
 import { Bullet } from '../entities/Bullet';
 import { SoundManager } from "../audio/SoundManager";
 
+
+
 export class MainScene extends Phaser.Scene {
   private player!: Player;
   private boss!: Boss;
@@ -201,7 +203,7 @@ export class MainScene extends Phaser.Scene {
     });
 
     // === Rocks ===
-    this.rocks = this.physics.add.staticGroup();
+    this.rocks = this.add.group({ runChildUpdate: true }); 
 
     const ROCK_COUNT = 24;
     const MIN_W = 24, MAX_W = 96; 
@@ -214,7 +216,7 @@ export class MainScene extends Phaser.Scene {
     const placeRock = (rx: number, ry: number, rw: number, rh: number) => {
 
       const name = this.getUniqueWord(this.words_rock);
-      const rock = new Rock(this, rx, ry, rw, rh, name);
+      const rock = new Rock(this, rx, ry, rw, rh, name,3);
       this.rocks.add(rock);
 
       placed.push(new Phaser.Geom.Rectangle(rx - rw / 2, ry - rh / 2, rw, rh));
@@ -278,9 +280,17 @@ export class MainScene extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.rocks);
     
     // 4) Bullet × Rock
-    this.physics.add.collider(this.bullets, this.rocks, (bGO) => {
-      (bGO as Bullet).takeDamage(1);
+    // this.physics.add.collider(this.bullets, this.rocks, (bGO) => {
+    //   (bGO as Bullet).takeDamage(1);
+    // });
+
+    this.physics.add.collider(this.bullets, this.rocks, (b: Bullet, r: Rock) => {
+      if (!b.active || !r.active) return;
+      // Bullet 側は private vanishAs を持つので、共通口の takeDamage で消す
+      r.takeDamage(1);     // Rock HP-1（3発で破壊）
+      b.takeDamage(1);     // Bullet も消滅（DeathFX は Base 側で統一）
     });
+
 
     // 5) Bullet × Bullet
     this.physics.add.collider(
