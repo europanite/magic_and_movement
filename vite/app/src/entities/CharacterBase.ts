@@ -117,7 +117,7 @@ export class CharacterBase extends Base {
     const now = this.scene.time.now;
     if (!this.canShoot(now)) return false;
     if (typeof scene.spawnBullet !== "function") {
-      console.warn("[CharacterBase] scene.spawnBullet が見つかりません。");
+      console.warn("[CharacterBase] scene.spawnBullet not found");
       return false;
     }
 
