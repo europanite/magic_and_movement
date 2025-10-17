@@ -1,4 +1,3 @@
-// app/src/entities/Rock.ts
 import Phaser from "phaser";
 import { Base } from "./Base";
 

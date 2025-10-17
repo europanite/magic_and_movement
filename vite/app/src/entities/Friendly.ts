@@ -5,7 +5,6 @@ import { Rock } from "./Rock";
 
 export class Friendly extends CharacterBase {
   public direction: number = 90;
-
   private moveTarget: Phaser.Math.Vector2 | null = null;
   private targetRock: Rock | null = null;
   private moveSpeed = 180;

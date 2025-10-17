@@ -147,7 +147,7 @@ export class CharacterBase extends Base {
     return true;
   }
 
-  // ===== tide =====
+  // ===== die =====
   protected override die() {
     if (this.getData("__dying")) return;
     this.setData("__dying", true);
@@ -174,4 +174,22 @@ export class CharacterBase extends Base {
       if (!this.destroyed) this.destroy();
     });
   }
+  public forward(){}
+  public back(){}
+  public right(){}
+  public left (){}
+  public walk(){}
+  public work(){}
+  public light(){}
+  // public play(){}
+  public pray (){}
+  public lay (){}
+  public stay(){}
+  public dig(){}
+  public stop(){}
+  public run(){}
+  public learn (){}
+  public rock(){}
+  public lock(){}
+  public barrage(){}
 }
