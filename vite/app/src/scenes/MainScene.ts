@@ -260,9 +260,8 @@ export class MainScene extends Phaser.Scene {
         this.hasLineOfSight(this.boss.x, this.boss.y, this.friendly.x, this.friendly.y);
 
       if (!canSee) return;
-
         const angle = Phaser.Math.RadToDeg(
-                Phaser.Math.Angle.Between(this.boss.x, this.boss.y,  this.friendly.x,  this.friendly.y)
+          Phaser.Math.Angle.Between(this.boss.x, this.boss.y,  this.friendly.x,  this.friendly.y)
         );
         this.boss.shootSpread(angle, 5, 30, {
                 speed: 400,
@@ -360,18 +359,21 @@ export class MainScene extends Phaser.Scene {
     for (const friendly of this.friendlies.getChildren()) {
       if ((friendly as any).isAutoMoving?.()) continue;
       friendly.setVelocity(0);
+
       let moving = false;
-      if (left)    { friendly.setVelocityX(-speed); this.facing = "left";    moving = true; friendly.direction=180; }
-      if (right)   { friendly.setVelocityX( speed); this.facing = "right";   moving = true; friendly.direction=0; }
-      if (forward) { friendly.setVelocityY(-speed); this.facing = "forward"; moving = true; friendly.direction=270; }
-      if (back)    { friendly.setVelocityY( speed); this.facing = "back";    moving = true; friendly.direction=90; }
-      // animation plays or waits
+      if (left)    { friendly.setVelocityX(-speed); friendly.direction = 180; moving = true; }
+      if (right)   { friendly.setVelocityX( speed); friendly.direction =   0; moving = true; }
+      if (forward) { friendly.setVelocityY(-speed); friendly.direction = 270; moving = true; }
+      if (back)    { friendly.setVelocityY( speed); friendly.direction =  90; moving = true; }
+
       if (moving) {
-        friendly.play(`walk-${this.facing}`, true);
+        const key = friendly.direction === 0   ? "right"
+                  : friendly.direction === 180 ? "left"
+                  : friendly.direction === 270 ? "forward"
+                  : "back";
+        friendly.play(`walk-${key}`, true);
       } else {
-        friendly.anims.stop();
-        const idleFrame = MainScene.FRAMES[this.facing].idle;
-        friendly.setFrame(idleFrame);
+        (friendly as any).playIdleFromDirection?.(); // Friendly API
       }
     }
 
@@ -409,11 +411,11 @@ export class MainScene extends Phaser.Scene {
               const angle = Phaser.Math.RadToDeg(
                 Phaser.Math.Angle.Between(this.friendly.x, this.friendly.y, enemy.x, enemy.y)
               );
-              this.friendly.shootSpread(angle, 5, 30, {
-                speed: 400,
-                radius: 8,
-                lifespanMs: 1000,
-                armDelayMs: 300,
+              // Align visible facing to aim
+              this.friendly.faceToward(enemy.x, enemy.y);
+              // Fire strictly using character's direction so graphics and bullet match
+              this.friendly.shootSpread(this.friendly.direction, 5, 30, {
+                speed: 400, radius: 8, lifespanMs: 1000, armDelayMs: 300,
               });
             }
           });

@@ -142,4 +142,32 @@ export class Friendly extends CharacterBase {
     body.position.x = this.x - halfW;
     body.position.y = this.y - halfH;
   }
+  // Add near other public helpers
+  public faceToward(targetX: number, targetY: number) {
+    const dx = targetX - this.x;
+    const dy = targetY - this.y;
+    const absx = Math.abs(dx), absy = Math.abs(dy);
+
+    if (absx >= absy) {
+      // left/right dominate
+      (this as any).facing = dx >= 0 ? "right" : "left";
+      this.direction = dx >= 0 ? 0 : 180;
+    } else {
+      (this as any).facing = dy >= 0 ? "back" : "forward";
+      this.direction = dy >= 0 ? 90 : 270;
+    }
+  }
+
+  // Idle consistent with last facing/direction (callable from scene)
+  public playIdleFromDirection() {
+    const key = this.direction === 0   ? "right"
+            : this.direction === 180 ? "left"
+            : this.direction === 270 ? "forward"
+            : "back"; // 90 or fallback
+    this.anims.stop();
+    // If you have dedicated idle frames, map here; otherwise reuse walk-* start frame
+    this.anims.play(`walk-${key}`, true);
+    this.anims.pause(this.anims.currentAnim?.frames[0]); // freeze on first frame for "idle"
+  }
+
 }
