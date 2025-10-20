@@ -9,13 +9,11 @@ import { Bullet } from '../entities/Bullet';
 import { SoundManager } from "../audio/SoundManager";
 import { Setting } from "./Setting";
 
-
-
 export class MainScene01 extends Phaser.Scene {
   private friendly!: Friendly;
+  private friendlies!: Phaser.Physics.Arcade.Group;
   private boss!: Boss;
   private bullets!: Phaser.Physics.Arcade.Group; 
-  private friendlies!: Phaser.Physics.Arcade.Group;
   private enemies!:    Phaser.Physics.Arcade.Group;
   private rocks!:      Phaser.Physics.Arcade.StaticGroup;
 
@@ -92,7 +90,6 @@ export class MainScene01 extends Phaser.Scene {
 
     this.create_boss();
 
-    // Collision
     this.set_collision();
 
     this.setupMic();
@@ -101,11 +98,9 @@ export class MainScene01 extends Phaser.Scene {
   }
 
   update() {
-
     for (const friendly of this.friendlies.getChildren()) {
       friendly.updateAction();
     }
-
   }
 
   private setupMic() {
@@ -121,8 +116,22 @@ export class MainScene01 extends Phaser.Scene {
       if (!running) {
         asr.start((text, isFinal) => {
           const lower = text.toLowerCase();
-          logger.cmd(`🎯  MIC: "${text}"`);
           if (!isFinal) { stat.textContent = "mic: listening…"; return; }
+          this.listen();
+          logger.cmd(`voice: ${lower}`);
+
+          // Movement
+          this.friendly.setup_mic(lower);
+
+        });
+        running = true; btn.textContent = "⏹ Stop mic"; stat.textContent = "mic: listening…";
+      } else {
+        asr.stop(); running = false; btn.textContent = "🎤 Start mic"; stat.textContent = "mic: idle";
+      }
+    };
+
+  }
+  private listen(lower=""){
           this.enemies.children.each((enemyGO: Phaser.GameObjects.GameObject) => {
             const enemy = enemyGO as Enemy;
             const name = enemy.displayName.toLowerCase();
@@ -144,21 +153,7 @@ export class MainScene01 extends Phaser.Scene {
               this.friendly.moveToRock(rock);
             }
           });
-
-          logger.cmd(`voice: ${lower}`);
-
-          // Movement
-          this.friendly.setup_mic(lower);
-
-        });
-        running = true; btn.textContent = "⏹ Stop mic"; stat.textContent = "mic: listening…";
-      } else {
-        asr.stop(); running = false; btn.textContent = "🎤 Start mic"; stat.textContent = "mic: idle";
-      }
-    };
-
   }
-
   // === LoS / FOV / Range ===
   private hasLineOfSight(ax: number, ay: number, bx: number, by: number): boolean {
     const ray = new Phaser.Geom.Line(ax, ay, bx, by);
