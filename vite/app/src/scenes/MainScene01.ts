@@ -10,7 +10,7 @@ import { SoundManager } from "../audio/SoundManager";
 
 
 
-export class MainScene extends Phaser.Scene {
+export class MainScene01 extends Phaser.Scene {
   private friendly!: Friendly;
   private boss!: Boss;
   private bullets!: Phaser.Physics.Arcade.Group; 
@@ -69,13 +69,13 @@ export class MainScene extends Phaser.Scene {
   private Y_FRIENDLY = this.Max_H - this.H/2;
 
   constructor(){
-    super("MainScene");
+    super("MainScene01");
   }
 
   preload() {
-    this.load.spritesheet('friendly', 'images/witch_sheet.png', {frameWidth: MainScene.FRAME_W,frameHeight: MainScene.FRAME_H,},);
-    this.load.spritesheet('enemy', 'images/enemy_sheet.png', {frameWidth: MainScene.FRAME_W,frameHeight: MainScene.FRAME_H,},);
-    this.load.spritesheet('boss', 'images/enemy_sheet.png', {frameWidth: MainScene.FRAME_W,frameHeight: MainScene.FRAME_H,});
+    this.load.spritesheet('friendly', 'images/witch_sheet.png', {frameWidth: MainScene01.FRAME_W,frameHeight: MainScene01.FRAME_H,},);
+    this.load.spritesheet('enemy', 'images/enemy_sheet.png', {frameWidth: MainScene01.FRAME_W,frameHeight: MainScene01.FRAME_H,},);
+    this.load.spritesheet('boss', 'images/enemy_sheet.png', {frameWidth: MainScene01.FRAME_W,frameHeight: MainScene01.FRAME_H,});
     this.load.image("bullet", "images/bullet.png");
     this.load.audio("bgm_main", "audio/bgm.mp3");
     this.load.audio("se_friendly_die", "audio/character_destroy.mp3");
@@ -129,10 +129,10 @@ export class MainScene extends Phaser.Scene {
     } as any;
 
     // animation
-    this.makeWalkAnim("walk-back",    MainScene.FRAMES.back.walk);
-    this.makeWalkAnim("walk-left",    MainScene.FRAMES.left.walk);
-    this.makeWalkAnim("walk-right",   MainScene.FRAMES.right.walk);
-    this.makeWalkAnim("walk-forward", MainScene.FRAMES.forward.walk);
+    this.makeWalkAnim("walk-back",    MainScene01.FRAMES.back.walk);
+    this.makeWalkAnim("walk-left",    MainScene01.FRAMES.left.walk);
+    this.makeWalkAnim("walk-right",   MainScene01.FRAMES.right.walk);
+    this.makeWalkAnim("walk-forward", MainScene01.FRAMES.forward.walk);
   
     // Shoot
     this.input.keyboard!.on('keydown-SPACE', () => {

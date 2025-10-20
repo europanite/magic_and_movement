@@ -60,8 +60,7 @@ export class GameResultsScene extends Phaser.Scene {
       .setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     btnRetry.on("pointerup", () => {
-      // MainScene Starts
-      this.scene.start("MainScene");
+      this.scene.start("MainScene01");
     });
 
     btnTitle.on("pointerup", () => {

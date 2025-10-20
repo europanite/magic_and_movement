@@ -109,7 +109,7 @@ export class TitleScene extends Phaser.Scene {
     if (this.bgm?.isPlaying) this.bgm.stop();
     this.input.keyboard!.removeAllListeners();
     this.input.removeAllListeners();
-    this.scene.start("MainScene");
+    this.scene.start("MainScene01");
   }
 
   private flashHint() {
