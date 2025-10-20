@@ -69,11 +69,32 @@ export class TitleScene extends Phaser.Scene {
     const buttonHeight = Math.max(44, Math.round(h * 0.06));
     const labelSize = Math.max(16, Math.round(buttonHeight * 0.42));
 
-    const startBtn = this.makeButton(w / 2, menuY, buttonWidth, buttonHeight, "▶ Start", () => this.startGame(), labelSize);
+    const startBtn = this.makeButton(
+      w / 2, 
+      menuY, 
+      buttonWidth, 
+      buttonHeight, 
+      "▶ Start", () => this.startGame(), 
+      labelSize);
+
+    const escapeBtn = this.makeButton(
+      w / 2,
+      menuY + (buttonHeight + spacing),
+      buttonWidth,
+      buttonHeight,
+      "Escape",
+      () => {
+        if (this.bgm?.isPlaying) this.bgm.stop();
+        this.input.keyboard?.removeAllListeners();
+        this.input.removeAllListeners();
+        this.scene.start("EscapeScene01");
+      },
+      labelSize
+    );
 
     const optionsBtn = this.makeButton(
       w / 2,
-      menuY + (buttonHeight + spacing),
+      menuY + 2 * (buttonHeight + spacing),
       buttonWidth,
       buttonHeight,
       "Options",
@@ -81,7 +102,7 @@ export class TitleScene extends Phaser.Scene {
       labelSize
     );
 
-    this.uiContainer.add([startBtn, optionsBtn]);
+    this.uiContainer.add([startBtn, escapeBtn, optionsBtn]);
 
     this.hintText = this.add.text(w / 2, h - Math.max(24, Math.round(h * 0.04)), "Press SPACE / Click / Tap to Start", {
       fontFamily: "monospace",

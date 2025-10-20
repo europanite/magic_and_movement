@@ -19,6 +19,9 @@ export class MainScene01 extends Phaser.Scene {
   private enemies!:    Phaser.Physics.Arcade.Group;
   private rocks!:      Phaser.Physics.Arcade.StaticGroup;
   private bgm?: Phaser.Sound.BaseSound;
+  // === Sprite Sheet ===
+  private FRAME_W = 32;
+  private FRAME_H = 32;
 
   private words_rock = [
     "rock","stone","hill","cliff","sand","dust","mud","cave","valley","island",
@@ -48,12 +51,8 @@ export class MainScene01 extends Phaser.Scene {
   wasd!: { [k: string]: Phaser.Input.Keyboard.Key };
   facing: "back" | "left" | "right" | "forward" = "back";
 
-  // === Sprite Sheet ===
-  static FRAME_W = 32;
-  static FRAME_H = 32;
-
   // Frame Assignment
-  static FRAMES = {
+  private FRAMES = {
     back:  { idle: 0,  walk: [0, 1, 2] },
     left:  { idle: 3,  walk: [3, 4, 5] },
     right: { idle: 6,  walk: [6, 7, 8] },
@@ -73,9 +72,9 @@ export class MainScene01 extends Phaser.Scene {
   }
 
   preload() {
-    this.load.spritesheet('friendly', 'images/witch_sheet.png', {frameWidth: MainScene01.FRAME_W,frameHeight: MainScene01.FRAME_H,},);
-    this.load.spritesheet('enemy', 'images/enemy_sheet.png', {frameWidth: MainScene01.FRAME_W,frameHeight: MainScene01.FRAME_H,},);
-    this.load.spritesheet('boss', 'images/enemy_sheet.png', {frameWidth: MainScene01.FRAME_W,frameHeight: MainScene01.FRAME_H,});
+    this.load.spritesheet('friendly', 'images/witch_sheet.png', {frameWidth: this.FRAME_W,frameHeight: this.FRAME_H,},);
+    this.load.spritesheet('enemy', 'images/enemy_sheet.png', {frameWidth: this.FRAME_W,frameHeight: this.FRAME_H,},);
+    this.load.spritesheet('boss', 'images/enemy_sheet.png', {frameWidth: this.FRAME_W,frameHeight: this.FRAME_H,});
     this.load.image("bullet", "images/bullet.png");
     this.load.audio("bgm_main", "audio/bgm.mp3");
     this.load.audio("se_friendly_die", "audio/character_destroy.mp3");
@@ -94,7 +93,6 @@ export class MainScene01 extends Phaser.Scene {
     // audio
     const bgm = this.sound.add("bgm_main", { loop: true, volume: 0.4 });
     bgm.play();
-    
 
     // ground
     this.cameras.main.setBackgroundColor(0x66CDAA);
@@ -129,10 +127,10 @@ export class MainScene01 extends Phaser.Scene {
     } as any;
 
     // animation
-    this.makeWalkAnim("walk-back",    MainScene01.FRAMES.back.walk);
-    this.makeWalkAnim("walk-left",    MainScene01.FRAMES.left.walk);
-    this.makeWalkAnim("walk-right",   MainScene01.FRAMES.right.walk);
-    this.makeWalkAnim("walk-forward", MainScene01.FRAMES.forward.walk);
+    this.makeWalkAnim("walk-back",    this.FRAMES.back.walk);
+    this.makeWalkAnim("walk-left",    this.FRAMES.left.walk);
+    this.makeWalkAnim("walk-right",   this.FRAMES.right.walk);
+    this.makeWalkAnim("walk-forward", this.FRAMES.forward.walk);
   
     // Shoot
     this.input.keyboard!.on('keydown-SPACE', () => {
@@ -274,10 +272,10 @@ export class MainScene01 extends Phaser.Scene {
     });
 
     // Collision
+
     // Friendly × Rock
     this.physics.add.collider(this.friendly, this.rocks, (_pGO, rGO) => {
       const rock = rGO as Rock;
-      // stop ONLY when the touched rock is the current target
       if (this.friendly.isAutoMoving() && this.friendly.getTargetRock() === rock) {
         this.friendly.stopAutoMove();
         (this.friendly.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
@@ -289,11 +287,9 @@ export class MainScene01 extends Phaser.Scene {
     // 4) Bullet × Rock
     this.physics.add.collider(this.bullets, this.rocks, (b: Bullet, r: Rock) => {
       if (!b.active || !r.active) return;
-      // Bullet 側は private vanishAs を持つので、共通口の takeDamage で消す
-      r.takeDamage(1);     // Rock HP-1（3発で破壊）
-      b.takeDamage(1);     // Bullet も消滅（DeathFX は Base 側で統一）
+      r.takeDamage(1);
+      b.takeDamage(1);
     });
-
 
     // 5) Bullet × Bullet
     this.physics.add.collider(
@@ -373,7 +369,7 @@ export class MainScene01 extends Phaser.Scene {
                   : "back";
         friendly.play(`walk-${key}`, true);
       } else {
-        (friendly as any).playIdleFromDirection?.(); // Friendly API
+        (friendly as any).playIdleFromDirection?.();
       }
     }
 
