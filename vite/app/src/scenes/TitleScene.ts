@@ -77,21 +77,6 @@ export class TitleScene extends Phaser.Scene {
       "▶ Start", () => this.startGame(), 
       labelSize);
 
-    const escapeBtn = this.makeButton(
-      w / 2,
-      menuY + (buttonHeight + spacing),
-      buttonWidth,
-      buttonHeight,
-      "Escape",
-      () => {
-        if (this.bgm?.isPlaying) this.bgm.stop();
-        this.input.keyboard?.removeAllListeners();
-        this.input.removeAllListeners();
-        this.scene.start("EscapeScene01");
-      },
-      labelSize
-    );
-
     const optionsBtn = this.makeButton(
       w / 2,
       menuY + 2 * (buttonHeight + spacing),
@@ -102,7 +87,7 @@ export class TitleScene extends Phaser.Scene {
       labelSize
     );
 
-    this.uiContainer.add([startBtn, escapeBtn, optionsBtn]);
+    this.uiContainer.add([startBtn, optionsBtn]);
 
     this.hintText = this.add.text(w / 2, h - Math.max(24, Math.round(h * 0.04)), "Press SPACE / Click / Tap to Start", {
       fontFamily: "monospace",
@@ -132,18 +117,7 @@ export class TitleScene extends Phaser.Scene {
     this.input.removeAllListeners();
     this.scene.start("MainScene01");
   }
-
-  private flashHint() {
-    this.tweens.add({
-      targets: this.hintText,
-      alpha: 0.2,
-      duration: 120,
-      yoyo: true,
-      repeat: 1,
-      ease: "sine.inOut",
-    });
-  }
-
+  
   private fitCover(img: Phaser.GameObjects.Image, targetW: number, targetH: number) {
     const tex = this.textures.get(img.texture.key).getSourceImage() as HTMLImageElement;
     const iw = tex?.width ?? 0, ih = tex?.height ?? 0;

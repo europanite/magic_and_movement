@@ -1,9 +1,9 @@
 import Phaser from "phaser";
-import { CharacterBase } from "./CharacterBase";
+import { Character } from "./Character";
 import { logger } from "../logger";
 import { Rock } from "./Rock";
 
-export class Friendly extends CharacterBase {
+export class Friendly extends Character {
   public direction: number = 90;
   private moveTarget: Phaser.Math.Vector2 | null = null;
   private targetRock: Rock | null = null;
@@ -12,12 +12,35 @@ export class Friendly extends CharacterBase {
   private interrupted = false;
   private clampEnabled = false;
 
+  // Frame Assignment
+  private FRAMES = {
+    back:  { idle: 0,  walk: [0, 1, 2] },
+    left:  { idle: 3,  walk: [3, 4, 5] },
+    right: { idle: 6,  walk: [6, 7, 8] },
+    forward:    { idle: 9, walk: [9, 10, 11] },
+  };
+
+
+
   constructor(scene: Phaser.Scene, x: number, y: number, name = "you", maxHp = 5) {
     super(scene, x, y, "friendly", 0, name, maxHp, {
       sounds: { death: "se_friendly_die" },
       collideWorldBounds: true,
     });
+
+    // animation
+    this.makeWalkAnim("walk-back",    this.FRAMES.back.walk);
+    this.makeWalkAnim("walk-left",    this.FRAMES.left.walk);
+    this.makeWalkAnim("walk-right",   this.FRAMES.right.walk);
+    this.makeWalkAnim("walk-forward", this.FRAMES.forward.walk);
+
     this.setData("kind", "friendly");
+
+    // Check destructions
+    this.once(Phaser.GameObjects.Events.DESTROY, () => {
+      this.scene.triggerGameResults("defeated");
+    });
+
   }
 
   /** Begin auto-navigation toward the rock center. */
@@ -159,7 +182,7 @@ export class Friendly extends CharacterBase {
   }
 
   // Idle consistent with last facing/direction (callable from scene)
-  public playIdleFromDirection() {
+  private playIdleFromDirection() {
     const key = this.direction === 0   ? "right"
             : this.direction === 180 ? "left"
             : this.direction === 270 ? "forward"
@@ -168,6 +191,33 @@ export class Friendly extends CharacterBase {
     // If you have dedicated idle frames, map here; otherwise reuse walk-* start frame
     this.anims.play(`walk-${key}`, true);
     this.anims.pause(this.anims.currentAnim?.frames[0]); // freeze on first frame for "idle"
+  }
+  public updateAction(left: boolean, right: boolean, forward: boolean, back: boolean){
+      if (this.isAutoMoving?.()) return;
+      this.speed=200;
+      this.moving = false;
+      if (left)    { this.setVelocityX(-this.speed); this.direction = 180; this.moving = true; }
+      if (right)   { this.setVelocityX( this.speed); this.direction =   0; this.moving = true; }
+      if (forward) { this.setVelocityY(-this.speed); this.direction = 270; this.moving = true; }
+      if (back)    { this.setVelocityY( this.speed); this.direction =  90; this.moving = true; }
+
+      if (this.moving) {
+        const key = this.direction === 0   ? "right"
+                  : this.direction === 180 ? "left"
+                  : this.direction === 270 ? "forward"
+                  : "back";
+        this.play(`walk-${key}`, true);
+      } else {
+        this.playIdleFromDirection?.();
+      }
+  }
+  public makeWalkAnim(key: string, frames: number[]) {
+    this.scene.anims.create({
+      key,
+      frames: frames.map((f) => ({ key: "friendly", frame: f })),
+      frameRate: 8,
+      repeat: -1,
+    });
   }
 
 }

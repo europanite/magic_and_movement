@@ -41,8 +41,6 @@ export type ShootOverrides = Partial<Omit<WeaponConfig, "cooldownMs">>;
 export class Character extends Base {
   protected sounds: Required<CharacterSoundProfile> = { death: "", hit: "", attack: "" };
 
-
-  
   /** Ciommon */
   protected weapon: WeaponConfig = {
     speed: 300,
@@ -54,6 +52,10 @@ export class Character extends Base {
 
   /** Cool Down*/
   protected lastShotAt = 0;
+
+  //Movement 
+  public moving = false;
+  public speed = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -86,7 +88,7 @@ export class Character extends Base {
     const now = this.scene.time.now;
     if (!this.canShoot(now)) return false;
     if (typeof scene.spawnBullet !== "function") {
-      console.warn("[Character] scene.spawnBullet が見つかりません。");
+      console.warn("[Character] scene.spawnBullet not found");
       return false;
     }
 

@@ -49,15 +49,6 @@ export class MainScene01 extends Phaser.Scene {
     ]
 
   wasd!: { [k: string]: Phaser.Input.Keyboard.Key };
-  facing: "back" | "left" | "right" | "forward" = "back";
-
-  // Frame Assignment
-  private FRAMES = {
-    back:  { idle: 0,  walk: [0, 1, 2] },
-    left:  { idle: 3,  walk: [3, 4, 5] },
-    right: { idle: 6,  walk: [6, 7, 8] },
-    forward:    { idle: 9, walk: [9, 10, 11] },
-  };
 
   // input
   private dir = { forward:false, back:false, left:false, right:false };
@@ -110,11 +101,6 @@ export class MainScene01 extends Phaser.Scene {
       "you",
       5);
 
-    // Check destructions
-    this.friendly.once(Phaser.GameObjects.Events.DESTROY, () => {
-      this.triggerGameResults("defeated");
-    });
-
     this.friendlies.add(this.friendly);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -125,12 +111,6 @@ export class MainScene01 extends Phaser.Scene {
       D: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
       SPACE: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
     } as any;
-
-    // animation
-    this.makeWalkAnim("walk-back",    this.FRAMES.back.walk);
-    this.makeWalkAnim("walk-left",    this.FRAMES.left.walk);
-    this.makeWalkAnim("walk-right",   this.FRAMES.right.walk);
-    this.makeWalkAnim("walk-forward", this.FRAMES.forward.walk);
   
     // Shoot
     this.input.keyboard!.on('keydown-SPACE', () => {
@@ -146,9 +126,6 @@ export class MainScene01 extends Phaser.Scene {
 
     // Friendly Input
     const kb = this.input.keyboard!;
-    const setKey = (key:string, k:keyof typeof this.dir, v:boolean)=>{
-      kb.on(`${v?'keydown':'keyup'}-${key}`, ()=> this.dir[k]=v);
-    };
     const logKey = (type:string, key:string)=> logger.cmd(`key ${type}: ${key}`);
     kb.on("keydown", (e: KeyboardEvent) => logKey("back", e.key));
     kb.on("keyup",   (e: KeyboardEvent) => logKey("forward",   e.key));
@@ -346,42 +323,15 @@ export class MainScene01 extends Phaser.Scene {
   }
 
   update() {
-    const speed = 200;
     const left    = (this.cursors.left?.isDown  || this.wasd.A.isDown   || this.dir.left);
     const right   = (this.cursors.right?.isDown || this.wasd.D.isDown   || this.dir.right);
     const forward = (this.cursors.up?.isDown    || this.wasd.W.isDown   || this.dir.forward);
     const back    = (this.cursors.down?.isDown  || this.wasd.S.isDown   || this.dir.back);
 
     for (const friendly of this.friendlies.getChildren()) {
-      if ((friendly as any).isAutoMoving?.()) continue;
-      friendly.setVelocity(0);
-
-      let moving = false;
-      if (left)    { friendly.setVelocityX(-speed); friendly.direction = 180; moving = true; }
-      if (right)   { friendly.setVelocityX( speed); friendly.direction =   0; moving = true; }
-      if (forward) { friendly.setVelocityY(-speed); friendly.direction = 270; moving = true; }
-      if (back)    { friendly.setVelocityY( speed); friendly.direction =  90; moving = true; }
-
-      if (moving) {
-        const key = friendly.direction === 0   ? "right"
-                  : friendly.direction === 180 ? "left"
-                  : friendly.direction === 270 ? "forward"
-                  : "back";
-        friendly.play(`walk-${key}`, true);
-      } else {
-        (friendly as any).playIdleFromDirection?.();
-      }
+      friendly.updateAction(left,right,forward,back);
     }
 
-  }
-
-  private makeWalkAnim(key: string, frames: number[]) {
-    this.anims.create({
-      key,
-      frames: frames.map((f) => ({ key: "friendly", frame: f })),
-      frameRate: 8,
-      repeat: -1,
-    });
   }
 
   private setupMic() {
@@ -404,9 +354,6 @@ export class MainScene01 extends Phaser.Scene {
             const enemy = enemyGO as Enemy;
             const name = enemy.displayName.toLowerCase();
             if (lower.includes(name)) {
-              const angle = Phaser.Math.RadToDeg(
-                Phaser.Math.Angle.Between(this.friendly.x, this.friendly.y, enemy.x, enemy.y)
-              );
               // Align visible facing to aim
               this.friendly.faceToward(enemy.x, enemy.y);
               // Fire strictly using character's direction so graphics and bullet match
