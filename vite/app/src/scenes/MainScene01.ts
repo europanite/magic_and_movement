@@ -7,6 +7,7 @@ import { Boss } from "../entities/Boss";
 import { Friendly } from "../entities/Friendly";
 import { Bullet } from '../entities/Bullet';
 import { SoundManager } from "../audio/SoundManager";
+import { Setting } from "./Setting";
 
 
 
@@ -17,9 +18,10 @@ export class MainScene01 extends Phaser.Scene {
   private friendlies!: Phaser.Physics.Arcade.Group;
   private enemies!:    Phaser.Physics.Arcade.Group;
   private rocks!:      Phaser.Physics.Arcade.StaticGroup;
-  // === Sprite Sheet ===
-  private FRAME_W = 32;
-  private FRAME_H = 32;
+
+  // input
+  private X_FRIENDLY = Setting.WORLD.W/2;
+  private Y_FRIENDLY = Setting.WORLD.Max_H - Setting.WORLD.H/2;
 
   private words_rock = [
     "rock","stone","hill","cliff","sand","dust","mud","cave","valley","island",
@@ -46,21 +48,14 @@ export class MainScene01 extends Phaser.Scene {
     "iron","steel","mech","void","warp","curse","doom","burn","bite","crash"
     ]
 
-  // input
-  private W = 1200;
-  private H = 900;
-  private Max_H = 2400;
-  private X_FRIENDLY = this.W/2;
-  private Y_FRIENDLY = this.Max_H - this.H/2;
-
   constructor(){
     super("MainScene01");
   }
 
   preload() {
-    this.load.spritesheet('friendly', 'images/witch_sheet.png', {frameWidth: this.FRAME_W,frameHeight: this.FRAME_H,},);
-    this.load.spritesheet('enemy', 'images/enemy_sheet.png', {frameWidth: this.FRAME_W,frameHeight: this.FRAME_H,},);
-    this.load.spritesheet('boss', 'images/enemy_sheet.png', {frameWidth: this.FRAME_W,frameHeight: this.FRAME_H,});
+    this.load.spritesheet('friendly', 'images/witch_sheet.png', {frameWidth: Setting.SPRITE.FRAME_W,frameHeight: Setting.SPRITE.FRAME_H,},);
+    this.load.spritesheet('enemy', 'images/enemy_sheet.png', {frameWidth: Setting.SPRITE.FRAME_W,frameHeight: Setting.SPRITE.FRAME_H,},);
+    this.load.spritesheet('boss', 'images/enemy_sheet.png', {frameWidth: Setting.SPRITE.FRAME_W,frameHeight: Setting.SPRITE.FRAME_H,});
     this.load.image("bullet", "images/bullet.png");
     this.load.audio("bgm_main", "audio/bgm.mp3");
     this.load.audio("se_friendly_die", "audio/character_destroy.mp3");
@@ -84,8 +79,8 @@ export class MainScene01 extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(0x66CDAA);
 
     // boundary & camera
-    this.cameras.main.setBounds(0, 0, this.W, this.Max_H);
-    this.physics.world.setBounds(0, 0, this.W, this.Max_H);
+    this.cameras.main.setBounds(0, 0, Setting.WORLD.W, Setting.WORLD.Max_H);
+    this.physics.world.setBounds(0, 0, Setting.WORLD.W, Setting.WORLD.Max_H);
 
     this.create_friendlies();
 
@@ -298,7 +293,7 @@ export class MainScene01 extends Phaser.Scene {
   private create_boss(){
     // === Boss ===
     const bossName = this.getUniqueWord(this.words_enemy);
-    this.boss = new Boss(this, this.W * 0.5, 300, bossName, 30);
+    this.boss = new Boss(this, Setting.WORLD.W * 0.5, 300, bossName, 30);
     this.enemies.add(this.boss);
 
     // === Boss atack ===
@@ -333,7 +328,7 @@ export class MainScene01 extends Phaser.Scene {
 
     const ROCK_COUNT = 24;
     const MIN_W = 24, MAX_W = 96; 
-    const MIN_H = 24, MAX_HH = 96;
+    const MIN_H = 24, MAX_H = 96;
     const SAFE_RADIUS = 140;
 
     const friendlySpawn = new Phaser.Math.Vector2(this.friendly.x, this.friendly.y);
@@ -352,9 +347,9 @@ export class MainScene01 extends Phaser.Scene {
       let tries = 0;
       while (tries++ < 25) {
         const rw = Phaser.Math.Between(MIN_W, MAX_W);
-        const rh = Phaser.Math.Between(MIN_H, MAX_HH);
-        const rx = Phaser.Math.Between(60 + rw/2, this.W - 60 - rw/2);
-        const ry = Phaser.Math.Between(200 + rh/2, this.Max_H - 200 - rh/2);
+        const rh = Phaser.Math.Between(MIN_H, MAX_H);
+        const rx = Phaser.Math.Between(60 + rw/2, Setting.WORLD.W - 60 - rw/2);
+        const ry = Phaser.Math.Between(200 + rh/2, Setting.WORLD.Max_H - 200 - rh/2);
 
         if (friendlySpawn.distance(new Phaser.Math.Vector2(rx, ry)) < SAFE_RADIUS) continue;
 
@@ -373,8 +368,8 @@ export class MainScene01 extends Phaser.Scene {
     this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
     const ENEMY_COUNT = 6;
     for (let i = 0; i < ENEMY_COUNT; i++) {
-      const randX = Phaser.Math.Between(100, this.W - 100);
-      const randY = Phaser.Math.Between(500, this.Max_H - 200);
+      const randX = Phaser.Math.Between(100, Setting.WORLD.W - 100);
+      const randY = Phaser.Math.Between(500, Setting.WORLD.Max_H - 200);
       const e = new Enemy(this, randX, randY, this.getUniqueWord(this.words_enemy));
       this.enemies.add(e);
     }
