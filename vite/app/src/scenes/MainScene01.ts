@@ -146,9 +146,6 @@ export class MainScene01 extends Phaser.Scene {
 
     // Friendly Input
     const kb = this.input.keyboard!;
-    const setKey = (key:string, k:keyof typeof this.dir, v:boolean)=>{
-      kb.on(`${v?'keydown':'keyup'}-${key}`, ()=> this.dir[k]=v);
-    };
     const logKey = (type:string, key:string)=> logger.cmd(`key ${type}: ${key}`);
     kb.on("keydown", (e: KeyboardEvent) => logKey("back", e.key));
     kb.on("keyup",   (e: KeyboardEvent) => logKey("forward",   e.key));

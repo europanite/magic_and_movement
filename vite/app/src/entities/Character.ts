@@ -10,7 +10,7 @@ export type CharacterSoundProfile = {
   attack?: string;
 };
 
-export type CharacterOptions = ConstructorParameters<typeof Base>[6] & {
+export type CharacterBaseOptions = ConstructorParameters<typeof Base>[6] & {
   sounds?: CharacterSoundProfile;
 };
 
@@ -41,8 +41,6 @@ export type ShootOverrides = Partial<Omit<WeaponConfig, "cooldownMs">>;
 export class Character extends Base {
   protected sounds: Required<CharacterSoundProfile> = { death: "", hit: "", attack: "" };
 
-
-  
   /** Ciommon */
   protected weapon: WeaponConfig = {
     speed: 300,
@@ -63,7 +61,7 @@ export class Character extends Base {
     frame: number | string,
     displayName: string,
     maxHp = 1,
-    opts: CharacterOptions = {}
+    opts: CharacterBaseOptions = {}
   ) {
     super(scene, x, y, texture, frame, displayName, maxHp, opts);
     if (opts?.sounds) this.sounds = { ...this.sounds, ...opts.sounds };
@@ -86,7 +84,7 @@ export class Character extends Base {
     const now = this.scene.time.now;
     if (!this.canShoot(now)) return false;
     if (typeof scene.spawnBullet !== "function") {
-      console.warn("[Character] scene.spawnBullet が見つかりません。");
+      console.warn("[Character] scene.spawnBullet not found");
       return false;
     }
 
