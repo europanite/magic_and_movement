@@ -4,6 +4,7 @@ import { MainScene01 } from "./scenes/MainScene01";
 import { OptionScene } from "./scenes/OptionScene";
 import { GameResultsScene } from "./scenes/GameResultsScene";
 import { logger } from "./logger"
+import { EscapeScene01 } from "./scenes/EscapeScene01";
 
 logger.info("Booting Phaser...");
 
@@ -17,7 +18,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: BASE_H,
   backgroundColor: "#20242a",
   physics: { default: "arcade", arcade: { debug: true } },
-  scene: [TitleScene, OptionScene, MainScene01, GameResultsScene],
+  scene: [TitleScene, EscapeScene01, OptionScene, MainScene01, GameResultsScene],
   scale: {
     mode: Phaser.Scale.FIT,
     // autoCenter: Phaser.Scale.CENTER_BOTH

@@ -77,6 +77,15 @@ export class TitleScene extends Phaser.Scene {
       "▶ Start", () => this.startGame(), 
       labelSize);
 
+    const escapeBtn = this.makeButton(
+      w / 2,
+      menuY + 1 * (buttonHeight + spacing),
+      buttonWidth,
+      buttonHeight,
+      "▶ Start", () => this.startEscape(), 
+      labelSize
+    );
+
     const optionsBtn = this.makeButton(
       w / 2,
       menuY + 2 * (buttonHeight + spacing),
@@ -87,7 +96,7 @@ export class TitleScene extends Phaser.Scene {
       labelSize
     );
 
-    this.uiContainer.add([startBtn, optionsBtn]);
+    this.uiContainer.add([startBtn, escapeBtn, optionsBtn]);
 
     this.hintText = this.add.text(w / 2, h - Math.max(24, Math.round(h * 0.04)), "Press SPACE / Click / Tap to Start", {
       fontFamily: "monospace",
@@ -116,6 +125,13 @@ export class TitleScene extends Phaser.Scene {
     this.input.keyboard!.removeAllListeners();
     this.input.removeAllListeners();
     this.scene.start("MainScene01");
+  }
+
+  private startEscape() {
+    if (this.bgm?.isPlaying) this.bgm.stop();
+    this.input.keyboard!.removeAllListeners();
+    this.input.removeAllListeners();
+    this.scene.start("EscapeScene01");
   }
   
   private fitCover(img: Phaser.GameObjects.Image, targetW: number, targetH: number) {
@@ -218,7 +234,7 @@ export class TitleScene extends Phaser.Scene {
     const labelSize = Math.max(16, Math.round(buttonHeight * 0.42));
     const menuY = columnY + 70;
 
-    const [startBtn, howtoBtn, optionsBtn] = this.uiContainer.list.filter(n => n instanceof Phaser.GameObjects.Container) as Phaser.GameObjects.Container[];
+    const [startBtn, escapeBtn, howtoBtn, optionsBtn] = this.uiContainer.list.filter(n => n instanceof Phaser.GameObjects.Container) as Phaser.GameObjects.Container[];
 
     const reframe = (btn: Phaser.GameObjects.Container, i: number) => {
       btn.setPosition(w / 2, menuY + i * (buttonHeight + spacing));
@@ -231,8 +247,9 @@ export class TitleScene extends Phaser.Scene {
     };
 
     reframe(startBtn, 0);
-    reframe(howtoBtn, 1);
-    reframe(optionsBtn, 2);
+    reframe(escapeBtn, 1);
+    reframe(howtoBtn, 2);
+    reframe(optionsBtn, 3);
 
     this.hintText
       .setFontSize(hintSize)

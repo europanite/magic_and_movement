@@ -11,6 +11,8 @@ export class Friendly extends Character {
   private facing: "right" | "left" | "forward" | "back" = "forward";
   private interrupted = false;
   private clampEnabled = false;
+  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  wasd!: { [k: string]: Phaser.Input.Keyboard.Key };
 
   // Frame Assignment
   private FRAMES = {
@@ -40,6 +42,33 @@ export class Friendly extends Character {
     this.once(Phaser.GameObjects.Events.DESTROY, () => {
       this.scene.triggerGameResults("defeated");
     });
+
+      this.cursors = this.scene.input.keyboard!.createCursorKeys();
+    this.wasd = {
+      W: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+      A: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+      S: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+      D: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+      SPACE: this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
+    } as any;
+  
+    // Shoot
+    this.scene.input.keyboard!.on('keydown-SPACE', () => {
+      this.shoot(this.direction, {
+        speed: 400,
+        radius: 8,
+        lifespanMs: 1000,
+        armDelayMs: 300,
+      });
+    });
+
+    this.scene.cameras.main.startFollow(this, true, 0.1, 0.1);
+
+    // Friendly Input
+    const kb = this.scene.input.keyboard!;
+    const logKey = (type:string, key:string)=> logger.cmd(`key ${type}: ${key}`);
+    kb.on("keydown", (e: KeyboardEvent) => logKey("back", e.key));
+    kb.on("keyup",   (e: KeyboardEvent) => logKey("forward",   e.key));
 
   }
 
@@ -192,7 +221,13 @@ export class Friendly extends Character {
     this.anims.play(`walk-${key}`, true);
     this.anims.pause(this.anims.currentAnim?.frames[0]); // freeze on first frame for "idle"
   }
-  public updateAction(left: boolean, right: boolean, forward: boolean, back: boolean){
+  public updateAction(){
+
+    const left    = (this.cursors.left?.isDown  || this.wasd.A.isDown );
+    const right   = (this.cursors.right?.isDown || this.wasd.D.isDown );
+    const forward = (this.cursors.up?.isDown    || this.wasd.W.isDown );
+    const back    = (this.cursors.down?.isDown  || this.wasd.S.isDown );
+
       if (this.isAutoMoving?.()) return;
       this.speed=200;
       this.moving = false;
@@ -219,5 +254,20 @@ export class Friendly extends Character {
       repeat: -1,
     });
   }
+  public setup_mic(lower = ""){
+          if (/\bforward\b/.test(lower)) { set("forward", true);  set("back",false); set("left",false); set("right",false); }
+          if (/\bback\b/.test(lower))    { set("forward", false); set("back",true);  set("left",false); set("right",false); }
+          if (/\bleft\b/.test(lower))    { set("forward", false); set("back",false); set("left",true);  set("right",false); }
+          if (/\bright\b/.test(lower))   { set("forward", false); set("back",false); set("left",false); set("right",true); }
+          if (/\bstop\b/.test(lower))    { set("forward", false); set("back",false); set("left",false); set("right",false); }
 
+          if (/\bshoot\b/.test(lower)) {
+            this.shoot(this.direction, {
+              speed: 400,
+              radius: 8,
+              lifespanMs: 1000,
+              armDelayMs: 300,
+            });
+          }
+  }
 }

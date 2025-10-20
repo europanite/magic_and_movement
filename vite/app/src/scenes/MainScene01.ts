@@ -14,11 +14,9 @@ export class MainScene01 extends Phaser.Scene {
   private friendly!: Friendly;
   private boss!: Boss;
   private bullets!: Phaser.Physics.Arcade.Group; 
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private friendlies!: Phaser.Physics.Arcade.Group;
   private enemies!:    Phaser.Physics.Arcade.Group;
   private rocks!:      Phaser.Physics.Arcade.StaticGroup;
-  private bgm?: Phaser.Sound.BaseSound;
   // === Sprite Sheet ===
   private FRAME_W = 32;
   private FRAME_H = 32;
@@ -48,10 +46,7 @@ export class MainScene01 extends Phaser.Scene {
     "iron","steel","mech","void","warp","curse","doom","burn","bite","crash"
     ]
 
-  wasd!: { [k: string]: Phaser.Input.Keyboard.Key };
-
   // input
-  private dir = { forward:false, back:false, left:false, right:false };
   private W = 1200;
   private H = 900;
   private Max_H = 2400;
@@ -92,230 +87,18 @@ export class MainScene01 extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, this.W, this.Max_H);
     this.physics.world.setBounds(0, 0, this.W, this.Max_H);
 
-    // Friendly
-    this.friendlies = this.physics.add.group({ classType: Friendly, runChildUpdate: true });
-    this.friendly = new Friendly(
-      this, 
-      this.X_FRIENDLY,
-      this.Y_FRIENDLY,
-      "you",
-      5);
+    this.create_friendlies();
 
-    this.friendlies.add(this.friendly);
+    this.create_bullets();
 
-    this.cursors = this.input.keyboard!.createCursorKeys();
-    this.wasd = {
-      W: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
-      A: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
-      S: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-      D: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-      SPACE: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
-    } as any;
-  
-    // Shoot
-    this.input.keyboard!.on('keydown-SPACE', () => {
-      this.friendly.shoot(this.friendly.direction, {
-        speed: 400,
-        radius: 8,
-        lifespanMs: 1000,
-        armDelayMs: 300,
-      });
-    });
+    this.create_enemies();
 
-    this.cameras.main.startFollow(this.friendly, true, 0.1, 0.1);
+    this.create_rocks();
 
-    // Friendly Input
-    const kb = this.input.keyboard!;
-    const logKey = (type:string, key:string)=> logger.cmd(`key ${type}: ${key}`);
-    kb.on("keydown", (e: KeyboardEvent) => logKey("back", e.key));
-    kb.on("keyup",   (e: KeyboardEvent) => logKey("forward",   e.key));
-
-    // Bullets group
-    this.bullets = this.physics.add.group({
-      classType: Bullet,
-      runChildUpdate: true,
-      maxSize: 600,
-    });
-
-    // Enemy
-    this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
-    const ENEMY_COUNT = 6;
-    for (let i = 0; i < ENEMY_COUNT; i++) {
-      const randX = Phaser.Math.Between(100, this.W - 100);
-      const randY = Phaser.Math.Between(500, this.Max_H - 200);
-      const e = new Enemy(this, randX, randY, this.getUniqueWord(this.words_enemy));
-      this.enemies.add(e);
-    }
-    // === Enemy Attack ===
-    this.time.addEvent({
-      delay: 2000,
-      loop: true,
-      callback: () => {
-        if (!this.friendly?.active) return;
-
-        this.enemies.children.each((enemyGO: Phaser.GameObjects.GameObject) => {
-          const e = enemyGO as Phaser.Physics.Arcade.Sprite;
-          if (!e.active) return;
-
-          const canSee =
-            this.inFOVAndRange(e.x, e.y, this.friendly.x, this.friendly.y, { fovDeg: 120, range: 700 }) &&
-            this.hasLineOfSight(e.x, e.y, this.friendly.x, this.friendly.y);
-
-          if (!canSee) return;
-
-          // Shoot
-          const ang = Phaser.Math.RadToDeg(
-            Phaser.Math.Angle.Between(e.x, e.y, this.friendly.x, this.friendly.y)
-          );
-          (e as any ).shoot(ang, {
-            speed: 220,
-            radius: 8,
-            lifespanMs: 2000,
-            armDelayMs: 300,
-          });
-        });
-      },
-    });
-
-    // === Rocks ===
-    this.rocks = this.add.group({ runChildUpdate: true }); 
-
-    const ROCK_COUNT = 24;
-    const MIN_W = 24, MAX_W = 96; 
-    const MIN_H = 24, MAX_HH = 96;
-    const SAFE_RADIUS = 140;
-
-    const friendlySpawn = new Phaser.Math.Vector2(this.friendly.x, this.friendly.y);
-    const placed: Phaser.Geom.Rectangle[] = [];
-
-    const placeRock = (rx: number, ry: number, rw: number, rh: number) => {
-
-      const name = this.getUniqueWord(this.words_rock);
-      const rock = new Rock(this, rx, ry, rw, rh, name,3);
-      this.rocks.add(rock);
-
-      placed.push(new Phaser.Geom.Rectangle(rx - rw / 2, ry - rh / 2, rw, rh));
-    };
-    // Random Position Loop
-    for (let i = 0; i < ROCK_COUNT; i++) {
-      let tries = 0;
-      while (tries++ < 25) {
-        const rw = Phaser.Math.Between(MIN_W, MAX_W);
-        const rh = Phaser.Math.Between(MIN_H, MAX_HH);
-        const rx = Phaser.Math.Between(60 + rw/2, this.W - 60 - rw/2);
-        const ry = Phaser.Math.Between(200 + rh/2, this.Max_H - 200 - rh/2);
-
-        if (friendlySpawn.distance(new Phaser.Math.Vector2(rx, ry)) < SAFE_RADIUS) continue;
-
-        const cand = new Phaser.Geom.Rectangle(rx - rw/2, ry - rh/2, rw, rh);
-        const is_overlaps = placed.some(r => Phaser.Geom.Rectangle.Overlaps(r, cand));
-        if (is_overlaps) continue;
-
-        placeRock(rx, ry, rw, rh);
-
-        break;
-      }
-    }
-
-    // === Boss ===
-    const bossName = this.getUniqueWord(this.words_enemy);
-    this.boss = new Boss(this, this.W * 0.5, 300, bossName, 30);
-    this.enemies.add(this.boss);
-
-    // === Boss atack ===
-    this.time.addEvent({
-      delay: 1500,
-      loop: true,
-      callback: () => {
-        if (!this.boss?.active) return;
-
-      // visibility
-      const canSee =
-        this.inFOVAndRange(this.boss.x, this.boss.y, this.friendly.x, this.friendly.y, { fovDeg: 120, range: 700 }) &&
-        this.hasLineOfSight(this.boss.x, this.boss.y, this.friendly.x, this.friendly.y);
-
-      if (!canSee) return;
-        const angle = Phaser.Math.RadToDeg(
-          Phaser.Math.Angle.Between(this.boss.x, this.boss.y,  this.friendly.x,  this.friendly.y)
-        );
-        this.boss.shootSpread(angle, 5, 30, {
-                speed: 400,
-                radius: 8,
-                lifespanMs: 1000,
-                armDelayMs: 300,
-        });
-        this.boss.setWeapon({ armDelayMs: 500 });
-      },
-    });
+    this.create_boss();
 
     // Collision
-
-    // Friendly × Rock
-    this.physics.add.collider(this.friendly, this.rocks, (_pGO, rGO) => {
-      const rock = rGO as Rock;
-      if (this.friendly.isAutoMoving() && this.friendly.getTargetRock() === rock) {
-        this.friendly.stopAutoMove();
-        (this.friendly.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
-      }
-    });
-    // enemies × Rock
-    this.physics.add.collider(this.enemies, this.rocks);
-    
-    // 4) Bullet × Rock
-    this.physics.add.collider(this.bullets, this.rocks, (b: Bullet, r: Rock) => {
-      if (!b.active || !r.active) return;
-      r.takeDamage(1);
-      b.takeDamage(1);
-    });
-
-    // 5) Bullet × Bullet
-    this.physics.add.collider(
-      this.bullets,
-      this.bullets,
-      (aGO, bGO) => {
-        const a = aGO as Bullet;
-        const b = bGO as Bullet;
-        if (!a.active || !b.active) return;
-        a.takeDamage?.(1);
-        b.takeDamage?.(1);
-      },
-      (aGO, bGO) => {
-        const a = aGO as Bullet;
-        const b = bGO as Bullet;
-
-        if (!a.active || !b.active || !a.visible || !b.visible) return false;
-
-        if (!a.isArmed?.() || !b.isArmed?.()) return false;
-
-        const ao = a.getOwner?.();
-        const bo = b.getOwner?.();
-        if (ao && bo && ao === bo) return false;
-
-        const af = a.getData?.("faction");
-        const bf = b.getData?.("faction");
-        if (af && bf && af === bf) return false;
-
-        return true;
-      }
-    );
-
-    // Enemy Collision
-    this.physics.add.overlap(this.bullets, this.enemies, (bGO, eGO) => {
-      const b = bGO as Bullet;
-      if (!b.isArmed()) return;
-      (eGO as any).takeDamage?.(1);
-      logger.cmd(`Enemy Hit`)
-      b.takeDamage(1);
-    });
-
-    // Friendly Collision
-    this.physics.add.overlap(this.bullets, this.friendlies, (bGO, pGO) => {
-      const b = bGO as Bullet;
-      if (!b.isArmed()) return;
-      (pGO as any).takeDamage?.(1);
-      logger.cmd(`Friendly Hit`)
-      b.takeDamage(1);
-    });
+    this.set_collision();
 
     this.setupMic();
 
@@ -323,13 +106,9 @@ export class MainScene01 extends Phaser.Scene {
   }
 
   update() {
-    const left    = (this.cursors.left?.isDown  || this.wasd.A.isDown   || this.dir.left);
-    const right   = (this.cursors.right?.isDown || this.wasd.D.isDown   || this.dir.right);
-    const forward = (this.cursors.up?.isDown    || this.wasd.W.isDown   || this.dir.forward);
-    const back    = (this.cursors.down?.isDown  || this.wasd.S.isDown   || this.dir.back);
 
     for (const friendly of this.friendlies.getChildren()) {
-      friendly.updateAction(left,right,forward,back);
+      friendly.updateAction();
     }
 
   }
@@ -342,7 +121,6 @@ export class MainScene01 extends Phaser.Scene {
     if (!asr.supported) { stat.textContent = "mic: unsupported (use keys)"; btn.disabled = true; return; }
 
     let running = false;
-    const set = (k: keyof typeof this.dir, val: boolean)=> (this.dir[k] = val);
 
     btn.onclick = () => {
       if (!running) {
@@ -375,20 +153,8 @@ export class MainScene01 extends Phaser.Scene {
           logger.cmd(`voice: ${lower}`);
 
           // Movement
-          if (/\bforward\b/.test(lower)) { set("forward", true);  set("back",false); set("left",false); set("right",false); }
-          if (/\bback\b/.test(lower))    { set("forward", false); set("back",true);  set("left",false); set("right",false); }
-          if (/\bleft\b/.test(lower))    { set("forward", false); set("back",false); set("left",true);  set("right",false); }
-          if (/\bright\b/.test(lower))   { set("forward", false); set("back",false); set("left",false); set("right",true); }
-          if (/\bstop\b/.test(lower))    { set("forward", false); set("back",false); set("left",false); set("right",false); }
+          this.friendly.setup_mic(lower);
 
-          if (/\bshoot\b/.test(lower) && !/\bshoot (left|right|forward|back)\b/.test(lower)) {
-            this.friendly.shoot(this.friendly.direction, {
-              speed: 400,
-              radius: 8,
-              lifespanMs: 1000,
-              armDelayMs: 300,
-            });
-          }
         });
         running = true; btn.textContent = "⏹ Stop mic"; stat.textContent = "mic: listening…";
       } else {
@@ -461,23 +227,207 @@ export class MainScene01 extends Phaser.Scene {
 
   }
 
-  private triggerGameResults(reason: "defeated" | "timeout" | "fell") {
-    if ((this as any).__GameResultsFired) return;
-    (this as any).__GameResultsFired = true;
+  private set_collision(){
+    // Friendly × Rock
+    this.physics.add.collider(this.friendly, this.rocks, (_pGO, rGO) => {
+      const rock = rGO as Rock;
+      if (this.friendly.isAutoMoving() && this.friendly.getTargetRock() === rock) {
+        this.friendly.stopAutoMove();
+        (this.friendly.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      }
+    });
+    // enemies × Rock
+    this.physics.add.collider(this.enemies, this.rocks);
+    
+    // 4) Bullet × Rock
+    this.physics.add.collider(this.bullets, this.rocks, (b: Bullet, r: Rock) => {
+      if (!b.active || !r.active) return;
+      r.takeDamage(1);
+      b.takeDamage(1);
+    });
 
-    this.input.keyboard?.enabled && (this.input.keyboard.enabled = false);
-    this.physics.world.isPaused || this.physics.pause();
-    this.bgm?.stop();
+    // 5) Bullet × Bullet
+    this.physics.add.collider(
+      this.bullets,
+      this.bullets,
+      (aGO, bGO) => {
+        const a = aGO as Bullet;
+        const b = bGO as Bullet;
+        if (!a.active || !b.active) return;
+        a.takeDamage?.(1);
+        b.takeDamage?.(1);
+      },
+      (aGO, bGO) => {
+        const a = aGO as Bullet;
+        const b = bGO as Bullet;
 
-    const startAt = this.time.now;
-    this.cameras.main.fade(400, 0, 0, 0);
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.scene.start("GameResultsScene", {
-        reason,
-        timeMs: this.time.now - startAt,
-        score: (this as any).score ?? 0,
-      });
+        if (!a.active || !b.active || !a.visible || !b.visible) return false;
+
+        if (!a.isArmed?.() || !b.isArmed?.()) return false;
+
+        const ao = a.getOwner?.();
+        const bo = b.getOwner?.();
+        if (ao && bo && ao === bo) return false;
+
+        const af = a.getData?.("faction");
+        const bf = b.getData?.("faction");
+        if (af && bf && af === bf) return false;
+
+        return true;
+      }
+    );
+
+    // Enemy Collision
+    this.physics.add.overlap(this.bullets, this.enemies, (bGO, eGO) => {
+      const b = bGO as Bullet;
+      if (!b.isArmed()) return;
+      (eGO as any).takeDamage?.(1);
+      logger.cmd(`Enemy Hit`)
+      b.takeDamage(1);
+    });
+
+    // Friendly Collision
+    this.physics.add.overlap(this.bullets, this.friendlies, (bGO, pGO) => {
+      const b = bGO as Bullet;
+      if (!b.isArmed()) return;
+      (pGO as any).takeDamage?.(1);
+      logger.cmd(`Friendly Hit`)
+      b.takeDamage(1);
     });
   }
-  
+  private create_boss(){
+    // === Boss ===
+    const bossName = this.getUniqueWord(this.words_enemy);
+    this.boss = new Boss(this, this.W * 0.5, 300, bossName, 30);
+    this.enemies.add(this.boss);
+
+    // === Boss atack ===
+    this.time.addEvent({
+      delay: 1500,
+      loop: true,
+      callback: () => {
+        if (!this.boss?.active) return;
+
+      // visibility
+      const canSee =
+        this.inFOVAndRange(this.boss.x, this.boss.y, this.friendly.x, this.friendly.y, { fovDeg: 120, range: 700 }) &&
+        this.hasLineOfSight(this.boss.x, this.boss.y, this.friendly.x, this.friendly.y);
+
+      if (!canSee) return;
+        const angle = Phaser.Math.RadToDeg(
+          Phaser.Math.Angle.Between(this.boss.x, this.boss.y,  this.friendly.x,  this.friendly.y)
+        );
+        this.boss.shootSpread(angle, 5, 30, {
+                speed: 400,
+                radius: 8,
+                lifespanMs: 1000,
+                armDelayMs: 300,
+        });
+        this.boss.setWeapon({ armDelayMs: 500 });
+      },
+    });
+  }
+  private create_rocks(){
+    // === Rocks ===
+    this.rocks = this.add.group({ runChildUpdate: true }); 
+
+    const ROCK_COUNT = 24;
+    const MIN_W = 24, MAX_W = 96; 
+    const MIN_H = 24, MAX_HH = 96;
+    const SAFE_RADIUS = 140;
+
+    const friendlySpawn = new Phaser.Math.Vector2(this.friendly.x, this.friendly.y);
+    const placed: Phaser.Geom.Rectangle[] = [];
+
+    const placeRock = (rx: number, ry: number, rw: number, rh: number) => {
+
+      const name = this.getUniqueWord(this.words_rock);
+      const rock = new Rock(this, rx, ry, rw, rh, name,3);
+      this.rocks.add(rock);
+
+      placed.push(new Phaser.Geom.Rectangle(rx - rw / 2, ry - rh / 2, rw, rh));
+    };
+    // Random Position Loop
+    for (let i = 0; i < ROCK_COUNT; i++) {
+      let tries = 0;
+      while (tries++ < 25) {
+        const rw = Phaser.Math.Between(MIN_W, MAX_W);
+        const rh = Phaser.Math.Between(MIN_H, MAX_HH);
+        const rx = Phaser.Math.Between(60 + rw/2, this.W - 60 - rw/2);
+        const ry = Phaser.Math.Between(200 + rh/2, this.Max_H - 200 - rh/2);
+
+        if (friendlySpawn.distance(new Phaser.Math.Vector2(rx, ry)) < SAFE_RADIUS) continue;
+
+        const cand = new Phaser.Geom.Rectangle(rx - rw/2, ry - rh/2, rw, rh);
+        const is_overlaps = placed.some(r => Phaser.Geom.Rectangle.Overlaps(r, cand));
+        if (is_overlaps) continue;
+
+        placeRock(rx, ry, rw, rh);
+
+        break;
+      }
+    }
+  }
+  private create_enemies(){
+    // Enemy
+    this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
+    const ENEMY_COUNT = 6;
+    for (let i = 0; i < ENEMY_COUNT; i++) {
+      const randX = Phaser.Math.Between(100, this.W - 100);
+      const randY = Phaser.Math.Between(500, this.Max_H - 200);
+      const e = new Enemy(this, randX, randY, this.getUniqueWord(this.words_enemy));
+      this.enemies.add(e);
+    }
+    // === Enemy Attack ===
+    this.time.addEvent({
+      delay: 2000,
+      loop: true,
+      callback: () => {
+        if (!this.friendly?.active) return;
+
+        this.enemies.children.each((enemyGO: Phaser.GameObjects.GameObject) => {
+          const e = enemyGO as Phaser.Physics.Arcade.Sprite;
+          if (!e.active) return;
+
+          const canSee =
+            this.inFOVAndRange(e.x, e.y, this.friendly.x, this.friendly.y, { fovDeg: 120, range: 700 }) &&
+            this.hasLineOfSight(e.x, e.y, this.friendly.x, this.friendly.y);
+
+          if (!canSee) return;
+
+          // Shoot
+          const ang = Phaser.Math.RadToDeg(
+            Phaser.Math.Angle.Between(e.x, e.y, this.friendly.x, this.friendly.y)
+          );
+          (e as any ).shoot(ang, {
+            speed: 220,
+            radius: 8,
+            lifespanMs: 2000,
+            armDelayMs: 300,
+          });
+        });
+      },
+    });
+  }
+
+  private create_bullets(){
+    // Bullets group
+    this.bullets = this.physics.add.group({
+      classType: Bullet,
+      runChildUpdate: true,
+      maxSize: 600,
+    });
+  }
+  private create_friendlies(){
+    // Friendly
+    this.friendlies = this.physics.add.group({ classType: Friendly, runChildUpdate: true });
+    this.friendly = new Friendly(
+      this, 
+      this.X_FRIENDLY,
+      this.Y_FRIENDLY,
+      "you",
+      5);
+
+    this.friendlies.add(this.friendly);
+  }
 }
