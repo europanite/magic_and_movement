@@ -23,7 +23,6 @@ jobs:
       - name: Install deps
         working-directory: ./vite/app
         run: npm i
-
       - name: Build
         working-directory: ./vite/app
         run: npm run build:demo
