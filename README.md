@@ -1,39 +1,37 @@
-# [Magic and Movement](https://github.com/europanite/standard_react_fastapi_envimagic_and_movementronment "Magic and Movement")
+# [Magic and Movement](https://github.com/europanite/magic_and_movement "Magic and Movement")
 
-Speak Commands and control your character.
+Speak commands to control your character.
 
-The gameplay model is based on Fire and Movement. Two magical girls take turns suppressing enemies as they advance through a world.
+One magical girl shoots enemies and advance through a world.
+<!-- Two magical girls take turns suppressing enemies as they advance through a world. -->
+<!-- The gameplay model is based on Fire and Movement.  -->
 
 ## Commands
 | command | description | implement |
 | :--- | :--- | :--- |
-| Forward | | done | 
-| Back || done | 
-| Right | | done | 
-| Left | | done | 
-| Walk | | | 
+| Forward | go forward | done | 
+| Back | go back | done | 
+| Right | go right | done | 
+| Left | go left | done | 
+| Walk | go | | 
 | Work | | | 
-| Light | | | 
+| Light | light up the stage | | 
 | Play | | | 
-| Pray | | | 
-| Stay | | | 
-| Stop | | done | 
-| Run | | | 
-| Learn | | | 
-| Lock | | | 
+| Pray | ? | | 
+| Lay | lay down | | 
+| Stay |  | | 
+| dig | dig a hole | | 
+| Stop | stop | done | 
+| Run | move fast | | 
+| Learn | ? | | 
+| Shoot | shoot | | 
 | Rock | | |
+| Lock | | | 
 | Barrage | | | 
-| Enemy name | | done | 
-| Rock name | | done | 
+| Enemy name | shoot the enemy | done | 
+| Rock name | move to the rock | done | 
 
 etc
-
-[![CI](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/ci.yml/badge.svg)](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/ci.yml)
-[![Python Lint](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/lint.yml/badge.svg)](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/lint.yml)
-[![pages-build-deployment](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/pages/pages-build-deployment)
-[![CodeQL Advanced](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/codeql.yml/badge.svg)](https://github.com/europanite/standard_react_fastapi_environment/actions/workflows/codeql.yml)
-
-!["web_ui"](./assets/images/web_ui.png)
 
 **full-stack development environment** using:
 - **Vite**: [Vite](https://vite.dev/) 
@@ -82,7 +80,7 @@ etc
 
 ```bash
 # set environment variables:
-export REACT_NATIVE_PACKAGER_HOSTNAME=192.168.3.6
+export REACT_NATIVE_PACKAGER_HOSTNAME=${YOUR_HOST}
 
 # Build the image
 docker compose build
