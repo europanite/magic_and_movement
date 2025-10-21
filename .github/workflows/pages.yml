@@ -1,4 +1,4 @@
-name: Deploy Vite to GitHub Pages
+name: pages
 on:
   push:
     branches: [ main ]
@@ -21,13 +21,16 @@ jobs:
         with:
           node-version: 20
       - name: Install deps
-        run: npm ci || npm i
+        working-directory: ./vite/app
+        run: npm i
+
       - name: Build
+        working-directory: ./vite/app
         run: npm run build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: ./vite/app/dist
   deploy:
     needs: build
     runs-on: ubuntu-latest
