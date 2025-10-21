@@ -1,7 +1,6 @@
 export type OnText = (finalText: string, isFinal: boolean) => void;
 
 export function createASR(lang = "en-US") {
-  // @ts-expect-error webkit prefix for Chrome
   const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
   if (!SR) return { supported: false, start: () => {}, stop: () => {} };
 
