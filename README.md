@@ -7,19 +7,24 @@ The gameplay model is based on Fire and Movement. Two magical girls take turns s
 ## Commands
 | command | description | implement |
 | :--- | :--- | :--- |
-| Forward | | 
-| Back | | 
-| Right | | 
-| Left | | 
-| Light | | 
-| Play | | 
-| Pray | | 
-| Stay | | 
-| Stop | | 
-| Run | | 
-| Learn | | 
-| Lock | | 
-| Rock | | 
+| Forward | | done | 
+| Back || done | 
+| Right | | done | 
+| Left | | done | 
+| Walk | | | 
+| Work | | | 
+| Light | | | 
+| Play | | | 
+| Pray | | | 
+| Stay | | | 
+| Stop | | done | 
+| Run | | | 
+| Learn | | | 
+| Lock | | | 
+| Rock | | |
+| Barrage | | | 
+| Enemy name | | done | 
+| Rock name | | done | 
 
 etc
 

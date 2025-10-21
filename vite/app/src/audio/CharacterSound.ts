@@ -4,9 +4,9 @@ import Phaser from "phaser";
 export class CharacterSound {
   constructor(private scene: Phaser.Scene) {}
 
-  playDeath(kind: "player" | "enemy" | "boss") {
+  playDeath(kind: "friendly" | "enemy" | "boss") {
     const key = {
-      player: "se_player_die",
+      friendly: "se_friendly_die",
       enemy: "se_enemy_die",
       boss: "se_boss_die",
     }[kind];

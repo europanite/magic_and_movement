@@ -5,8 +5,6 @@ export class TitleScene extends Phaser.Scene {
   private bg!: Phaser.GameObjects.Image;
   private scrim!: Phaser.GameObjects.Graphics;
   private vignette!: Phaser.GameObjects.Graphics;
-
-  // UI
   private uiContainer!: Phaser.GameObjects.Container;
   private titleText!: Phaser.GameObjects.Text;
   private subtitleText!: Phaser.GameObjects.Text;
@@ -17,7 +15,6 @@ export class TitleScene extends Phaser.Scene {
   }
 
   preload() {
-    // 既存: タイトルBGMと背景
     this.load.audio("audio_title", "audio/title.mp3");
     this.load.image("title_bg", "images/title.png");
     this.load.audio("se_bullet_collision","audio/bullet_timeout.mp3");
@@ -30,25 +27,20 @@ export class TitleScene extends Phaser.Scene {
     this.bgm = this.sound.add("audio_title", { loop: true, volume: 0.4 });
     this.bgm.play();
 
-    // 背景（coverで全面）
     this.bg = this.add.image(w / 2, h / 2, "title_bg").setOrigin(0.5, 0.5);
     this.bg.setScrollFactor(0);
     this.fitCover(this.bg, w, h);
 
-    // 画像の上に半透明のスクリーン（文字のコントラスト確保）
     this.scrim = this.add.graphics().setScrollFactor(0).setDepth(5);
     this.drawScrim(this.scrim, w, h, 0.38);
 
-    // ソフトなビネット（端を暗くして中央を目立たせる）
     this.vignette = this.add.graphics().setScrollFactor(0).setDepth(6);
     this.drawVignette(this.vignette, w, h);
 
-    // ====== タイトル／メニュー（前面UI） ======
     this.uiContainer = this.add.container(0, 0).setDepth(10);
 
     const { titleSize, subSize, hintSize, columnY } = this.computeLayout(w, h);
 
-    // タイトル
     this.titleText = this.add.text(w / 2, columnY - 40, "Magic & Movement", {
       fontFamily: "monospace",
       fontSize: `${titleSize}px`,
@@ -60,7 +52,6 @@ export class TitleScene extends Phaser.Scene {
       .setShadow(0, Math.max(2, Math.round(titleSize * 0.06)), "#000", Math.max(8, Math.round(titleSize * 0.25)), true, true);
     this.uiContainer.add(this.titleText);
 
-    // サブタイトル
     this.subtitleText = this.add.text(w / 2, columnY + 10, "Say names or press keys", {
       fontFamily: "monospace",
       fontSize: `${subSize}px`,
@@ -72,19 +63,41 @@ export class TitleScene extends Phaser.Scene {
       .setShadow(0, Math.max(2, Math.round(subSize * 0.08)), "#000", Math.max(6, Math.round(subSize * 0.3)), true, true);
     this.uiContainer.add(this.subtitleText);
 
-    // メニュー群
     const menuY = columnY + 70;
     const spacing = Math.max(12, Math.round(h * 0.015));
     const buttonWidth = Math.min(520, Math.round(w * 0.6));
     const buttonHeight = Math.max(44, Math.round(h * 0.06));
     const labelSize = Math.max(16, Math.round(buttonHeight * 0.42));
 
-    const startBtn = this.makeButton(w / 2, menuY, buttonWidth, buttonHeight, "▶ Start", () => this.startGame(), labelSize);
-    const optionsBtn = this.makeButton(w / 2, menuY + (buttonHeight + spacing), buttonWidth, buttonHeight, "Options", () => this.flashHint(), labelSize);
+    const startBtn = this.makeButton(
+      w / 2, 
+      menuY, 
+      buttonWidth, 
+      buttonHeight, 
+      "▶ Start", () => this.startGame(), 
+      labelSize);
 
-    this.uiContainer.add([startBtn, optionsBtn]);
+    const escapeBtn = this.makeButton(
+      w / 2,
+      menuY + 1 * (buttonHeight + spacing),
+      buttonWidth,
+      buttonHeight,
+      "▶ Start", () => this.startEscape(), 
+      labelSize
+    );
 
-    // 既存のヒント文（スペース／クリック）
+    const optionsBtn = this.makeButton(
+      w / 2,
+      menuY + 2 * (buttonHeight + spacing),
+      buttonWidth,
+      buttonHeight,
+      "Options",
+      () => this.scene.start("OptionScene"),
+      labelSize
+    );
+
+    this.uiContainer.add([startBtn, escapeBtn, optionsBtn]);
+
     this.hintText = this.add.text(w / 2, h - Math.max(24, Math.round(h * 0.04)), "Press SPACE / Click / Tap to Start", {
       fontFamily: "monospace",
       fontSize: `${hintSize}px`,
@@ -96,38 +109,31 @@ export class TitleScene extends Phaser.Scene {
       .setShadow(0, Math.max(1, Math.round(hintSize * 0.1)), "#000", Math.max(4, Math.round(hintSize * 0.3)), true, true)
       .setDepth(10);
 
-    // 入力イベント（従来仕様）
     const start = () => this.startGame();
     this.input.keyboard!.on("keydown-SPACE", start);
-    this.input.on("pointerdown", start);
+    this.hintText.setInteractive({ useHandCursor: true })
+      .on("pointerup", start);
 
-    // リサイズ追従
     this.scale.on("resize", (gameSize: Phaser.Structs.Size) => {
       const { width, height } = gameSize;
       this.onResize(width, height);
     });
   }
 
-  // ===== helpers =====
   private startGame() {
     if (this.bgm?.isPlaying) this.bgm.stop();
     this.input.keyboard!.removeAllListeners();
     this.input.removeAllListeners();
-    this.scene.start("MainScene");
+    this.scene.start("MainScene01");
   }
 
-  private flashHint() {
-    // ひとまず未実装メニュー用の簡単なフィードバック
-    this.tweens.add({
-      targets: this.hintText,
-      alpha: 0.2,
-      duration: 120,
-      yoyo: true,
-      repeat: 1,
-      ease: "sine.inOut",
-    });
+  private startEscape() {
+    if (this.bgm?.isPlaying) this.bgm.stop();
+    this.input.keyboard!.removeAllListeners();
+    this.input.removeAllListeners();
+    this.scene.start("EscapeScene01");
   }
-
+  
   private fitCover(img: Phaser.GameObjects.Image, targetW: number, targetH: number) {
     const tex = this.textures.get(img.texture.key).getSourceImage() as HTMLImageElement;
     const iw = tex?.width ?? 0, ih = tex?.height ?? 0;
@@ -142,7 +148,6 @@ export class TitleScene extends Phaser.Scene {
     g.fillRect(0, 0, w, h);
   }
 
-  // 簡易ビネット（枠を数回描画して周辺を暗く）
   private drawVignette(g: Phaser.GameObjects.Graphics, w: number, h: number) {
     g.clear();
     const rings = 6;
@@ -205,12 +210,10 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private onResize(w: number, h: number) {
-    // 背景とオーバーレイをリレイアウト
     this.fitCover(this.bg, w, h);
     this.drawScrim(this.scrim, w, h, 0.38);
     this.drawVignette(this.vignette, w, h);
 
-    // テキスト・ボタンのスケール/位置を再計算
     const { titleSize, subSize, hintSize, columnY } = this.computeLayout(w, h);
 
     this.titleText
@@ -225,19 +228,16 @@ export class TitleScene extends Phaser.Scene {
       .setShadow(0, Math.max(2, Math.round(subSize * 0.08)), "#000", Math.max(6, Math.round(subSize * 0.3)), true, true)
       .setPosition(w / 2, columnY + 10);
 
-    // メニューはコンテナ内の相対配置を再構築せず、Y原点の基準だけ調整
     const spacing = Math.max(12, Math.round(h * 0.015));
     const buttonWidth = Math.min(520, Math.round(w * 0.6));
     const buttonHeight = Math.max(44, Math.round(h * 0.06));
     const labelSize = Math.max(16, Math.round(buttonHeight * 0.42));
     const menuY = columnY + 70;
 
-    // 子要素は [start, howto, options] の順で入れている
-    const [startBtn, howtoBtn, optionsBtn] = this.uiContainer.list.filter(n => n instanceof Phaser.GameObjects.Container) as Phaser.GameObjects.Container[];
+    const [startBtn, escapeBtn, howtoBtn, optionsBtn] = this.uiContainer.list.filter(n => n instanceof Phaser.GameObjects.Container) as Phaser.GameObjects.Container[];
 
     const reframe = (btn: Phaser.GameObjects.Container, i: number) => {
       btn.setPosition(w / 2, menuY + i * (buttonHeight + spacing));
-      // 背景矩形とラベルを更新
       const rect = btn.list[0] as Phaser.GameObjects.Rectangle;
       const label = btn.list[1] as Phaser.GameObjects.Text;
       rect.setSize(buttonWidth, buttonHeight);
@@ -247,8 +247,9 @@ export class TitleScene extends Phaser.Scene {
     };
 
     reframe(startBtn, 0);
-    reframe(howtoBtn, 1);
-    reframe(optionsBtn, 2);
+    reframe(escapeBtn, 1);
+    reframe(howtoBtn, 2);
+    reframe(optionsBtn, 3);
 
     this.hintText
       .setFontSize(hintSize)

@@ -64,7 +64,7 @@ export class Base extends Phaser.Physics.Arcade.Sprite {
 
     if (this.opts.showLabel) {
       this.nameTag = scene.add.text(this.x, this.y - this.displayHeight * 0.5 - 8, this.displayName, {
-        fontSize: "12px",
+        fontSize: "18px",
         color: "#fff",
         stroke: "#000",
         strokeThickness: 2,
@@ -94,28 +94,24 @@ export class Base extends Phaser.Physics.Arcade.Sprite {
     return this;
   }
 
-  /** HPを減算し、0以下なら死ぬ */
   public takeDamage(n = 1) {
     this.hp = Math.max(0, this.hp - n);
     if (this.hp <= 0) this.die();
   }
 
-  /** 外部からも死亡判定を参照可能に */
   public isDead(): boolean {
     return this.hp <= 0 || !this.active;
   }
 
   protected die() {
-    // 再入防止
     if (this.getData("__dying")) return;
     this.setData("__dying", true);
 
     this.nameTag?.destroy();
 
-    // kind フォールバックを強化（未設定や想定外でも "enemy" に統一）
     const raw = this.getData("kind");
     const kind: DeathKind =
-      raw === "player" ||
+      raw === "friendly" ||
       raw === "enemy" ||
       raw === "boss" ||
       raw === "bullet_timeout" ||
@@ -124,16 +120,13 @@ export class Base extends Phaser.Physics.Arcade.Sprite {
         : "enemy";
     if (raw !== kind) this.setData("kind", kind);
 
-    // 即時無効化
     this.setActive(false).setVisible(false);
     const body = this.body as Phaser.Physics.Arcade.Body | undefined;
     if (body) body.enable = false;
 
-    // エフェクト発火（破棄は DeathFX 側で）
     DeathFX.play(this.scene, this as unknown as Phaser.GameObjects.Sprite, kind);
   }
 
-  /** 1フレームごとにHP=0の個体を整理 */
   preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
     if (this.hp <= 0 && this.active) {

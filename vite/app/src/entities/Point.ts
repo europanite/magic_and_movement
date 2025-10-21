@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { Base } from "./Base";
 
-export class Rock extends Base {
+export class Point extends Base {
 
   constructor(
     scene: Phaser.Scene,
@@ -9,20 +9,20 @@ export class Rock extends Base {
     y: number,
     w = 96,
     h = 96,
-    name = "rock",
+    name = "point",
     hp = 3
   ) {
     // 1) Texture
-    if (!scene.textures.exists("rock")) {
+    if (!scene.textures.exists("point")) {
       const g = scene.make.graphics({ x: 0, y: 0, add: false });
-      g.fillStyle(0x5b4b3a, 1).fillRect(0, 0, w, h);
+      g.fillStyle(0x87cefa, 1).fillRect(0, 0, w, h);
       g.lineStyle(2, 0x2b241d, 0.6).strokeRect(0, 0, w, h);
-      g.generateTexture("rock", w, h);
+      g.generateTexture("point", w, h);
       g.destroy();
     }
 
     // 2) Base Initialize
-    super(scene, x, y, "rock", 0, name, hp, {
+    super(scene, x, y, "point", 0, name, hp, {
       immovable: true,
       collideWorldBounds: false,
       showLabel: true,
@@ -36,12 +36,13 @@ export class Rock extends Base {
     this.setDepth(10);
 
     // 3) Display size
-    this.w = w; this.h = h;
+    this.w = w; 
+    this.h = h;
     this.setDisplaySize(w, h);
 
     // Data tags
     this.setDataEnabled();
-    this.setData("kind", "rock");
+    this.setData("kind", "point");
     this.setData("name", name.toLowerCase());
 
     // 4) Stop

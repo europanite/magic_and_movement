@@ -1,21 +1,20 @@
-// app/src/entities/CharacterBase.ts
 import Phaser from "phaser";
 import { Base } from "./Base";
 import { DeathFX } from "../effects/DeathFX";
 import { SoundManager } from "../audio/SoundManager";
 
-/** Character 個別の効果音キー */
+/** Character Sounds */
 export type CharacterSoundProfile = {
-  death?: string;   // 撃破（死亡）時のSEキー
-  hit?: string;     // 被弾時のSEキー（必要なら）
-  attack?: string;  // 攻撃時のSEキー（必要なら）
+  death?: string; 
+  hit?: string;
+  attack?: string;
 };
 
-export type CharacterBaseOptions = ConstructorParameters<typeof Base>[6] & {
+export type CharacterOptions = ConstructorParameters<typeof Base>[6] & {
   sounds?: CharacterSoundProfile;
 };
 
-/** シーン側に実装されている想定の弾生成 API  */
+/** Bullet API  */
 type SceneWithSpawnBullet = Phaser.Scene & {
   spawnBullet?: (
     x: number,
@@ -28,21 +27,21 @@ type SceneWithSpawnBullet = Phaser.Scene & {
   ) => void;
 };
 
-/** 武器の既定パラメータ（spawnBullet の引数に対応） */
+/** Weapon parameters */
 export type WeaponConfig = {
-  speed: number;        // 発射速度
-  radius: number;       // 弾の見た目半径（displaySize の半径想定）
-  lifespanMs: number;   // 弾の寿命
-  armDelayMs: number;   // アーム（起爆可）までの遅延
-  cooldownMs: number;   // 射撃クールダウン
+  speed: number;
+  radius: number;
+  lifespanMs: number;
+  armDelayMs: number;
+  cooldownMs: number;
 };
 
 export type ShootOverrides = Partial<Omit<WeaponConfig, "cooldownMs">>;
 
-export class CharacterBase extends Base {
+export class Character extends Base {
   protected sounds: Required<CharacterSoundProfile> = { death: "", hit: "", attack: "" };
 
-  /** 共有武器設定（各キャラで上書き可） */
+  /** Ciommon */
   protected weapon: WeaponConfig = {
     speed: 300,
     radius: 8,
@@ -51,8 +50,12 @@ export class CharacterBase extends Base {
     cooldownMs: 140,
   };
 
-  /** クールダウン管理 */
+  /** Cool Down*/
   protected lastShotAt = 0;
+
+  //Movement 
+  public moving = false;
+  public speed = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -62,30 +65,44 @@ export class CharacterBase extends Base {
     frame: number | string,
     displayName: string,
     maxHp = 1,
-    opts: CharacterBaseOptions = {}
+    opts: CharacterOptions = {}
   ) {
-    super(scene, x, y, texture, frame, displayName, maxHp, opts);
-    if (opts?.sounds) this.sounds = { ...this.sounds, ...opts.sounds };
+    super(
+      scene, 
+      x, 
+      y, 
+      texture, 
+      frame, 
+      displayName, 
+      maxHp, 
+      opts
+    );
+    if (opts?.sounds) this.sounds = { 
+      ...this.sounds, 
+      ...opts.sounds,
+      labelDepth: 40
+    };
+    this.setDepth(30);
   }
 
-  /** 武器パラメータをキャラ単位で上書き */
+  /** Weapons */
   public setWeapon(config: Partial<WeaponConfig>) {
     this.weapon = { ...this.weapon, ...config };
     return this;
   }
 
-  /** クールダウンを考慮して撃てるか？ */
+  /** Cool down */
   public canShoot(now = this.scene.time.now): boolean {
     return (now - this.lastShotAt) >= this.weapon.cooldownMs;
   }
 
-  /** 単発射撃：角度（度数法）必須。Override で速度/寿命/半径/アーム遅延を上書き可。 */
+  /** shoot one bullet */
   public shoot(angleDeg: number, overrides: ShootOverrides = {}): boolean {
     const scene = this.scene as SceneWithSpawnBullet;
     const now = this.scene.time.now;
     if (!this.canShoot(now)) return false;
     if (typeof scene.spawnBullet !== "function") {
-      console.warn("[CharacterBase] scene.spawnBullet が見つかりません。");
+      console.warn("[Character] scene.spawnBullet not found");
       return false;
     }
 
@@ -97,7 +114,7 @@ export class CharacterBase extends Base {
     scene.spawnBullet(this.x, this.y, angleDeg, speed, radius, lifespanMs, armDelayMs);
     this.lastShotAt = now;
 
-    // 攻撃SE（あれば）
+    // Shoot SE
     if (this.sounds.attack) {
       this.scene.sound.play(this.sounds.attack, { volume: 0.6 });
     }
@@ -106,10 +123,10 @@ export class CharacterBase extends Base {
   }
 
   /**
-   * 扇状拡散射撃：
-   *  centerDeg … 中心角度（度数法）
-   *  count …… 発射数（2以上）
-   *  spreadDeg … 全体の扇角（左右合計）
+   * Shoot Bullets：
+   *  centerDeg … 
+   *  count …… 
+   *  spreadDeg … 
    */
   public shootSpread(centerDeg: number, count = 5, spreadDeg = 30, overrides: ShootOverrides = {}): boolean {
     if (count <= 0) return false;
@@ -117,7 +134,7 @@ export class CharacterBase extends Base {
     const now = this.scene.time.now;
     if (!this.canShoot(now)) return false;
     if (typeof scene.spawnBullet !== "function") {
-      console.warn("[CharacterBase] scene.spawnBullet が見つかりません。");
+      console.warn("[Character] scene.spawnBullet not found");
       return false;
     }
 
@@ -139,7 +156,7 @@ export class CharacterBase extends Base {
 
     this.lastShotAt = now;
 
-    // 攻撃SE（あれば）
+    // Attack SE
     if (this.sounds.attack) {
       this.scene.sound.play(this.sounds.attack, { volume: 0.6 });
     }
@@ -147,36 +164,49 @@ export class CharacterBase extends Base {
     return true;
   }
 
-  // ===== 死亡処理：既存実装を踏襲しつつ安定化 =====
+  // ===== die =====
   protected override die() {
-    // ① 再入防止
     if (this.getData("__dying")) return;
     this.setData("__dying", true);
 
     this.nameTag?.destroy();
 
-    const kind = (this.getData("kind") as "player" | "enemy" | "boss") ?? "enemy";
+    const kind = (this.getData("kind") as "friendly" | "enemy" | "boss") ?? "enemy";
 
-    // ② まず無効化（preUpdate で再実行されないように）
     this.setActive(false).setVisible(false);
     const body = this.body as Phaser.Physics.Arcade.Body | undefined;
     if (body) body.enable = false;
 
-    // ③ SE：SoundManager を優先。なければ DeathFX 側のデフォルトを利用可能。
     SoundManager.I?.characters?.playDeath(kind);
 
-    // ④ 視覚演出（粒子・シェイク）
     DeathFX.burstParticles(
       this.scene,
       this.x,
       this.y,
-      kind === "player" ? 0x80d0ff : kind === "boss" ? 0xff8080 : 0xffe080
+      kind === "friendly" ? 0x80d0ff : kind === "boss" ? 0xff8080 : 0xffe080
     );
     this.scene.cameras.main.shake(kind === "boss" ? 200 : 120, kind === "boss" ? 0.01 : 0.006);
 
-    // ⑤ tween 完了時に破棄（destroy はここだけ）
     DeathFX.tweenVanish(this.scene, this as unknown as Phaser.GameObjects.Sprite, () => {
       if (!this.destroyed) this.destroy();
     });
   }
+  public forward(){}
+  public back(){}
+  public right(){}
+  public left (){}
+  public walk(){}
+  public work(){}
+  public light(){}
+  // public play(){}
+  public pray (){}
+  public lay (){}
+  public stay(){}
+  public dig(){}
+  public stop(){}
+  public run(){}
+  public learn (){}
+  public rock(){}
+  public lock(){}
+  public barrage(){}
 }

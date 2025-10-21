@@ -1,32 +1,33 @@
-// app/src/scenes/GameResultsScene.ts
 import Phaser from "phaser";
 
 type GameResultsData = {
   reason?: "defeated" | "timeout" | "fell";
   score?: number;
   timeMs?: number;
+  retryScene?: string;
 };
 
 export class GameResultsScene extends Phaser.Scene {
   private ui!: Phaser.GameObjects.Container;
 
+  
   constructor() {
     super("GameResultsScene");
   }
 
   preload() {
-    // タイトルと同系色の暗背景があると可読性↑（任意で画像を使うならここでload）
   }
 
   create(data: GameResultsData) {
+  
+    const retryKey = data?.retryScene ?? "MainScene01"; // Fall Back
+
     const w = this.scale.width;
     const h = this.scale.height;
 
-    // 背景（暗転）
     this.add.rectangle(0, 0, w * 2, h * 2, 0x000000, 0.85).setOrigin(0);
 
-    // 文言
-    const title = this.add.text(w / 2, h * 0.35, "GAME OVER", {
+    const title = this.add.text(w / 2, h * 0.35, "GAME Results", {
       fontFamily: "system-ui, sans-serif",
       fontSize: "64px",
       color: "#ffffff",
@@ -47,7 +48,7 @@ export class GameResultsScene extends Phaser.Scene {
       { fontSize: "18px", color: "#aaaaaa" }
     ).setOrigin(0.5);
 
-    // ボタン（タイトルへ／リトライ）
+    // Buttons（Title／Retry）
     const btnStyle: Phaser.Types.GameObjects.Text.TextStyle = {
       fontSize: "28px",
       color: "#ffffff",
@@ -55,24 +56,18 @@ export class GameResultsScene extends Phaser.Scene {
       padding: { left: 16, right: 16, top: 8, bottom: 8 },
     };
 
-    const btnRetry = this.add.text(w / 2, h * 0.62, "Retry", btnStyle)
-      .setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-    const btnTitle = this.add.text(w / 2, h * 0.72, "Back to Title", btnStyle)
+    const btnRetry = this.add.text(w / 2, h * 0.6, "Retry", btnStyle)
       .setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     btnRetry.on("pointerup", () => {
-      // MainScene を新規開始（スコア等は初期化想定）
-      this.scene.start("MainScene");
+      this.scene.start(retryKey);
     });
 
-    btnTitle.on("pointerup", () => {
-      this.scene.start("TitleScene");
-    });
+    const btnTitle = this.add.text(w / 2, h * 0.7, "Back to Title", btnStyle)
+      .setOrigin(0.5).setInteractive({ useHandCursor: true });
+    btnTitle.on("pointerup", () => this.scene.start("TitleScene"));
 
-    // 軽い演出
     this.tweens.add({ targets: title, alpha: 0.5, yoyo: true, repeat: -1, duration: 900 });
-
     this.ui = this.add.container(0, 0, [title, reason, stats, btnRetry, btnTitle]).setDepth(1000);
   }
 }
