@@ -11,8 +11,10 @@ export class CommandParser {
     let sem: Semantic | null = null;
 
     switch (k) {
-      case "arrowleft": sem = { type: "TURN_LEFT" }; break;
-      case "arrowright": sem = { type: "TURN_RIGHT" }; break;
+      case "arrowleft": sem = { type: "GO_LEFT" }; break;
+      case "arrowright": sem = { type: "GO_RIGHT" }; break;
+      // case "arrowleft": sem = { type: "GO_LEFT" }; break;
+      // case "arrowright": sem = { type: "GO_RIGHT" }; break;
       case "l": sem = { type: "LIGHT_TOGGLE" }; break;
       case "w": sem = { type: "WALK" }; break;
       case "s": sem = { type: "STOP" }; break;
@@ -46,17 +48,41 @@ export class CommandParser {
     const raw = text.trim().toLowerCase();
     if (!raw) return;
 
-    // Rock name (MOVE_TO_ROCK)
+    // --- Enemy name ("attack goblin", "goblin")
+    const enemy = this.findEnemyName(raw);
+    if (enemy) { this.exec.exec({ type: "ATTACK_ENEMY", name: enemy }); return; }
+
+    // --- Rock name ("rock alpha", "alpha")
     const rock = this.findRockName(raw);
     if (rock) { this.exec.exec({ type: "MOVE_TO_ROCK", name: rock }); return; }
 
-    // Direction
-    if (/\bturn (left)\b/.test(raw)) {
-      this.exec.exec({ type: "TURN_LEFT" }); return;
-    }
-    if (/\bturn (right)\b/.test(raw)) {
-      this.exec.exec({ type: "TURN_RIGHT" }); return;
-    }
+    // --- Directional move: "go/move/walk left|right|forward|back"
+    if (/\b(go|move|walk)\s+(forward|ahead|up)\b/.test(raw)) { this.exec.exec({ type: "GO_FORWARD" }); return; }
+    if (/\b(go|move|walk)\s+(back|backward|reverse|down)\b/.test(raw)) { this.exec.exec({ type: "GO_BACK" }); return; }
+    if (/\b(go|move|walk)\s+left\b/.test(raw))  { this.exec.exec({ type: "GO_LEFT" }); return; }
+    if (/\b(go|move|walk)\s+right\b/.test(raw)) { this.exec.exec({ type: "GO_RIGHT" }); return; }
+
+    // --- Single-word move: "forward|back|left|right"
+    if (/^(forward|ahead|up)\b/.test(raw)) { this.exec.exec({ type: "GO_FORWARD" }); return; }
+    if (/^(back|backward|reverse|down)\b/.test(raw)) { this.exec.exec({ type: "GO_BACK" }); return; }
+    if (/^left\b/.test(raw))  { this.exec.exec({ type: "GO_LEFT" }); return; }
+    if (/^right\b/.test(raw)) { this.exec.exec({ type: "GO_RIGHT" }); return; }
+
+    // --- Turning 
+    if (/\bturn\s+(left)\b/.test(raw))  { this.exec.exec({ type: "TURN_LEFT" }); return; }
+    if (/\bturn\s+(right)\b/.test(raw)) { this.exec.exec({ type: "TURN_RIGHT" }); return; }
+    if (/\b(turn back|turn around|about face)\b/.test(raw)) { this.exec.exec({ type: "TURN_BACK" }); return; }
+
+    // --- Stop synonyms
+    if (/\b(stop|freeze|halt|wait|hold)\b/.test(raw)) { this.exec.exec({ type: "STOP" }); return; }
+
+    // --- Walk/Start
+    if (/\b(walk|go|move)\b/.test(raw)) { this.exec.exec({ type: "WALK" }); return; }
+
+    // --- Actions
+    if (/\b(shoot|fire)\b/.test(raw)) { this.exec.exec({ type: "SHOOT" }); return; }
+    if (/\b(light|lamp|torch|flashlight)\b/.test(raw)) { this.exec.exec({ type: "LIGHT_TOGGLE" }); return; }
+
     if (/\b(face|direction)\s+(\d{1,3})\b/.test(raw)) {
       const m = raw.match(/\b(face|direction)\s+(\d{1,3})\b/)!;
       const deg = Math.max(0, Math.min(359, parseInt(m[2], 10)));
@@ -98,5 +124,14 @@ export class CommandParser {
       case "SET_DIRECTION": return `SET_DIRECTION(${s.degrees})`;
       default: return s.type;
     }
+  }
+  private findEnemyName(raw: string): string | null {
+    const list = (this.exec as any).listEnemyNames?.() as string[] ?? [];
+    for (const name of list) {
+      const n = name.toLowerCase();
+      if (raw === n || raw.includes(n)) return name;
+    }
+    const m = raw.match(/\b(enemy|target)\s+([a-z0-9_-]+)\b/);
+    return m ? m[2] : null;
   }
 }

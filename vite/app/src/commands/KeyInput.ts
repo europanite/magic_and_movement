@@ -1,12 +1,7 @@
-// app/src/commands/KeyInput.ts
 import { CommandParser } from "./CommandParser";
 import { logger } from "../logger";
 
 /**
- * Centralized keyboard handler.
- * - keydown は CommandParser.fromKey()
- * - keyup   は CommandParser.fromKeyUp()
- * - attach/detach で安全に登録解除できる
  */
 export class KeyInput {
   private attached = false;
@@ -14,7 +9,6 @@ export class KeyInput {
   constructor(private parser: CommandParser) {}
 
   private onKeyDown = (e: KeyboardEvent) => {
-    // NOTE: CommandParser 側で preventDefault() する
     this.parser.fromKey(e);
   };
 
@@ -23,11 +17,9 @@ export class KeyInput {
   };
 
   /**
-   * 既存の window 直付けを一本化
    */
   attach(target: Window | Document = window) {
     if (this.attached) return;
-    // keydown/keyup を集中管理（passive:false で preventDefault を有効に）
     target.addEventListener("keydown", this.onKeyDown, { passive: false });
     target.addEventListener("keyup", this.onKeyUp, { passive: false });
     this.attached = true;

@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import { createASR } from "../asr";
 import { logger } from "../logger";
 import { Rock } from "../entities/Rock";
 import { Enemy } from "../entities/Enemy";
@@ -8,6 +7,10 @@ import { Friendly } from "../entities/Friendly";
 import { Bullet } from '../entities/Bullet';
 import { SoundManager } from "../audio/SoundManager";
 import { Setting } from "./Setting";
+import { CommandParser } from "../commands/CommandParser";
+import { VoiceInput } from "../commands/VoiceInput";
+import { KeyInput } from "../commands/KeyInput";
+import { PlayerController } from "../controllers/PlayerController";
 
 export class MainScene01 extends Phaser.Scene {
   private friendly!: Friendly;
@@ -16,6 +19,10 @@ export class MainScene01 extends Phaser.Scene {
   private bullets!: Phaser.Physics.Arcade.Group; 
   private enemies!:    Phaser.Physics.Arcade.Group;
   private rocks!:      Phaser.Physics.Arcade.StaticGroup;
+  private startedAtMs = 0;
+  private parser!: CommandParser;
+  private key!: KeyInput;
+  private mic!: VoiceInput;
 
   // input
   private X_FRIENDLY = Setting.WORLD.W/2;
@@ -65,6 +72,7 @@ export class MainScene01 extends Phaser.Scene {
   }
 
   create() {
+    this.startedAtMs = this.time.now;
     // log
     logger.cmd("GAME START");
     SoundManager.init(this);
@@ -90,9 +98,14 @@ export class MainScene01 extends Phaser.Scene {
 
     this.create_boss();
 
-    this.set_collision();
+    const controller = new PlayerController(this, this.friendly); // implements SemanticExecutor
+    this.parser = new CommandParser(controller);
+    this.key = new KeyInput(this.parser);
+    this.mic = new VoiceInput(this.parser);
+    this.key.attach();
+    this.mic.attach();
 
-    this.setupMic();
+    this.set_collision();
 
     this.registerInterruptHandlers();
   }
@@ -103,35 +116,7 @@ export class MainScene01 extends Phaser.Scene {
     }
   }
 
-  private setupMic() {
-    const btn = document.getElementById("btnMic") as HTMLButtonElement | null;
-    const stat = document.getElementById("micStatus");
-    const asr = createASR("en-US");
-    if (!btn || !stat) return;
-    if (!asr.supported) { stat.textContent = "mic: unsupported (use keys)"; btn.disabled = true; return; }
-
-    let running = false;
-
-    btn.onclick = () => {
-      if (!running) {
-        asr.start((text, isFinal) => {
-          const lower = text.toLowerCase();
-          if (!isFinal) { stat.textContent = "mic: listening…"; return; }
-          this.listen();
-          logger.cmd(`voice: ${lower}`);
-
-          // Movement
-          this.friendly.setup_mic(lower);
-
-        });
-        running = true; btn.textContent = "⏹ Stop mic"; stat.textContent = "mic: listening…";
-      } else {
-        asr.stop(); running = false; btn.textContent = "🎤 Start mic"; stat.textContent = "mic: idle";
-      }
-    };
-
-  }
-  private listen(lower=""){
+  public listen(lower=""){
           this.enemies.children.each((enemyGO: Phaser.GameObjects.GameObject) => {
             const enemy = enemyGO as Enemy;
             const name = enemy.displayName.toLowerCase();
@@ -419,5 +404,56 @@ export class MainScene01 extends Phaser.Scene {
       5);
 
     this.friendlies.add(this.friendly);
+  }
+
+  /** expose rock names to the command system */
+  public listRockNames(): string[] {
+    const out: string[] = [];
+    this.rocks?.children.each((go: Phaser.GameObjects.GameObject) => {
+      const r = go as Rock;
+      const n = (r.getData("name") as string) ?? r.displayName ?? "rock";
+      out.push(String(n).toLowerCase());
+    });
+    return out;
+  }
+
+  /** expose enemy names to the command system */
+  public listEnemyNames(): string[] {
+    const out: string[] = [];
+    this.enemies?.children.each((go: Phaser.GameObjects.GameObject) => {
+      const e = go as Enemy;
+      out.push(String(e.displayName).toLowerCase());
+    });
+    return out;
+  }
+
+  /** find rock by name (case-insensitive) */
+  public findRockByName(name: string): Rock | null {
+    const target = name.toLowerCase();
+    let found: Rock | null = null;
+    this.rocks?.children.each((go: Phaser.GameObjects.GameObject) => {
+      const r = go as Rock;
+      const n = ((r.getData("name") as string) ?? r.displayName ?? "").toLowerCase();
+      if (!found && n === target) found = r;
+    });
+    return found;
+  }
+
+  /** find enemy by name (case-insensitive) */
+  public findEnemyByName(name: string): Enemy | null {
+    const target = name.toLowerCase();
+    let found: Enemy | null = null;
+    this.enemies?.children.each((go: Phaser.GameObjects.GameObject) => {
+      const e = go as Enemy;
+      if (!found && e.displayName.toLowerCase() === target) found = e;
+    });
+    return found;
+  }
+
+  public triggerGameResults(reason: "defeated" | "timeout" | "fell") {
+    const timeMs = this.time.now - this.startedAtMs;
+    const score = 0;
+    this.sound.stopAll();
+    this.scene.start("GameResultsScene", { reason, score, timeMs });
   }
 }

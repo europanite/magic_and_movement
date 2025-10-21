@@ -236,7 +236,10 @@ export class Friendly extends Character {
       if (forward) { this.setVelocityY(-this.speed); this.direction = 270; this.moving = true; }
       if (back)    { this.setVelocityY( this.speed); this.direction =  90; this.moving = true; }
 
-      if (this.moving) {
+      const body = this.body as Phaser.Physics.Arcade.Body | undefined;
+      const physicallyMoving = !!body && (Math.abs(body.velocity.x) > 1 || Math.abs(body.velocity.y) > 1);
+
+      if (this.moving || physicallyMoving) {
         const key = this.direction === 0   ? "right"
                   : this.direction === 180 ? "left"
                   : this.direction === 270 ? "forward"

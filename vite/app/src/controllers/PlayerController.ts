@@ -12,23 +12,22 @@ export class PlayerController implements SemanticExecutor {
   constructor(
     private scene: Phaser.Scene,
     private friendly: Friendly,
-    /** Optional: rock name provider for MOVE_TO_ROCK auto-complete, etc. */
-    private listRocks?: () => string[]
   ) {}
 
-  /** For CommandParser voice intents (optional) */
   listRockNames(): string[] {
-    return this.listRocks?.() ?? [];
+    return (this.scene as any).listRockNames?.() ?? [];
+  }
+  listEnemyNames(): string[] {
+    return (this.scene as any).listEnemyNames?.() ?? [];
   }
 
   /** Main dispatch */
   exec(s: Semantic): void {
     switch (s.type) {
       case "GO_RIGHT": this.setDirectionDeg(0);   this.startWalking(); break;
-      case "GO_DOWN":  this.setDirectionDeg(90);  this.startWalking(); break;
+      case "GO_BACK":  this.setDirectionDeg(90);  this.startWalking(); break;
       case "GO_LEFT":  this.setDirectionDeg(180); this.startWalking(); break;
-      case "GO_UP":    this.setDirectionDeg(270); this.startWalking(); break;
-
+      case "GO_FORWARD":    this.setDirectionDeg(270); this.startWalking(); break;
       case "TURN_LEFT":  this.nudge(-90); break;
       case "TURN_RIGHT": this.nudge(+90); break;
       case "TURN_BACK":  this.nudge(+180); break;
@@ -54,9 +53,24 @@ export class PlayerController implements SemanticExecutor {
         (this.friendly as any).toggleLight?.();
         break;
 
-      case "MOVE_TO_ROCK":
-        (this.friendly as any).moveToRockByName?.(s.name);
+      case "MOVE_TO_ROCK": {
+        // name -> rock
+        const rock = (this.scene as any).findRockByName?.(s.name);
+        if (rock) this.friendly.moveToRock(rock);
         break;
+      }
+
+      case "ATTACK_ENEMY": {
+        // name -> enemy, face, then shoot（拡散でも単発でもOK）
+        const enemy = (this.scene as any).findEnemyByName?.(s.name);
+        if (enemy) {
+          (this.friendly as any).faceToward?.(enemy.x, enemy.y); // 既存の向き補助あり
+          this.friendly.shootSpread(this.friendly.direction, 5, 30, {
+            speed: 400, radius: 8, lifespanMs: 1000, armDelayMs: 300,
+          });
+        }
+        break;
+      }
     }
   }
 
@@ -71,13 +85,13 @@ export class PlayerController implements SemanticExecutor {
 
     // Basic readable facing (no animation coupling required)
     if (deg >= 45 && deg < 135) {
-      (this.friendly as any).facing = "back";    this.friendly.setFlipX(false);
+      (this.friendly as any).facing = "back";
     } else if (deg >= 135 && deg < 225) {
-      (this.friendly as any).facing = "left";    this.friendly.setFlipX(true);
+      (this.friendly as any).facing = "left";
     } else if (deg >= 225 && deg < 315) {
-      (this.friendly as any).facing = "forward"; this.friendly.setFlipX(false);
+      (this.friendly as any).facing = "forward";
     } else {
-      (this.friendly as any).facing = "right";   this.friendly.setFlipX(false);
+      (this.friendly as any).facing = "right";
     }
 
     (this.friendly as any).playIdleAnim?.();
