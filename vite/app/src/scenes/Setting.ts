@@ -65,13 +65,19 @@ export const Setting = {
 export type SettingType = typeof Setting;
 
 export const WORDS_POINT: string[] = [
-  "alpha","bravo","charlie","delta","echo","foxtrot","golf","hotel","india","juliet",
-  "kilo","lima","mike","november","oscar","papa","quebec","romeo","sierra","tango",
-  "uniform","victor","whiskey","xray","yankee","zulu",
-  "amber","ash","aurora","blaze","cedar","cobalt","comet","coral","copper","ember",
-  "falcon","fern","glacier","granite","ivy","jasper","maple","neon","olive",
-  "onyx","orchid","quartz","raven","willow"
+  "cat","dog","bird","fish","cow","horse","pig","hen","mouse","bear",
+  "tree","flower","grass","leaf","seed",
+  "sun","moon","star","sky","cloud","rain","snow","wind","fire","stone",
+  "river","sea","lake","mountain","island","road","street","bridge","house","room",
+  "door","window","table","chair","bed","roof","wall","floor","lamp","clock",
+  "book","pen","paper","map","key","bag","shoe","shirt","hat","ring",
+  "phone","watch","camera","radio","car","bus","train","bike","boat","plane",
+  "apple","bread","milk","egg","rice","sugar","salt","water","tea","coffee",
+  "run","walk","jump","swim","read","write","play","open","close","look",
+  "see","hear","say","talk","make","take","give","find","start","stop",
+  "big","small","hot","cold","fast"
 ];
+
 export const WORDS_ROCK: string[] = [
     "rock","stone","hill","cliff","sand","dust","mud","cave","valley","island",
     "shore","beach","wave","shell","pebble","boulder","mountain","forest","tree","leaf",
