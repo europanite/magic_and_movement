@@ -1,5 +1,7 @@
 # [Magic and Movement](https://github.com/europanite/magic_and_movement "Magic and Movement")
 
+[![Deploy Vite to GitHub Pages](https://github.com/europanite/magic_and_movement/actions/workflows/pages.yml/badge.svg)](https://github.com/europanite/magic_and_movement/actions/workflows/pages.yml)
+
 Speak commands to control your character.
 
 One magical girl shoots enemies and advance through a world.
