@@ -23,6 +23,7 @@ export class MainScene01 extends Phaser.Scene {
   private parser!: CommandParser;
   private key!: KeyInput;
   private mic!: VoiceInput;
+  private gameOver = false;
 
   // input
   private X_FRIENDLY = Setting.WORLD.W/2;
@@ -454,6 +455,6 @@ export class MainScene01 extends Phaser.Scene {
     const timeMs = this.time.now - this.startedAtMs;
     const score = 0;
     this.sound.stopAll();
-    this.scene.start("GameResultsScene", { reason, score, timeMs });
+    this.scene.start("GameResultsScene", { reason, score, timeMs, retryScene: "MainScene01" });
   }
 }

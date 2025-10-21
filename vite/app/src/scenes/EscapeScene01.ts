@@ -6,11 +6,12 @@ import { Boss } from "../entities/Boss";
 import { Friendly } from "../entities/Friendly";
 import { Bullet } from '../entities/Bullet';
 import { SoundManager } from "../audio/SoundManager";
-import { Setting } from "./Setting";
+import { Setting, WORDS_POINT,WORDS_ROCK,WORDS_ENEMY } from "./Setting";
 import { CommandParser } from "../commands/CommandParser";
 import { VoiceInput } from "../commands/VoiceInput";
 import { KeyInput } from "../commands/KeyInput";
 import { PlayerController } from "../controllers/PlayerController";
+import { Point } from "../entities/Point";
 
 export class EscapeScene01 extends Phaser.Scene {
   private friendly!: Friendly;
@@ -18,40 +19,16 @@ export class EscapeScene01 extends Phaser.Scene {
   private boss!: Boss;
   private bullets!: Phaser.Physics.Arcade.Group; 
   private enemies!:    Phaser.Physics.Arcade.Group;
-  private rocks!:      Phaser.Physics.Arcade.StaticGroup;
   private startedAtMs = 0;
   private parser!: CommandParser;
   private key!: KeyInput;
   private mic!: VoiceInput;
-
+  private rocks!:  Phaser.Physics.Arcade.StaticGroup;
+  private points!: Phaser.Physics.Arcade.Group;
   // input
   private X_FRIENDLY = Setting.WORLD.W/2;
   private Y_FRIENDLY = Setting.WORLD.Max_H - Setting.WORLD.H/2;
-
-  private words_rock = [
-    "rock","stone","hill","cliff","sand","dust","mud","cave","valley","island",
-    "shore","beach","wave","shell","pebble","boulder","mountain","forest","tree","leaf",
-    "root","branch","grass","moss","vine","river","stream","lake","pond","water",
-    "ice","snow","frost","storm","cloud","wind","breeze","rain","drop","mist",
-    "shadow","light","sun","moon","star","sky","dawn","night","day","twilight",
-    "earth","soil","field","plain","plate","ridge","path","trail","step","road",
-    "wall","gate","bridge","pillar","arch","ring","circle","cube","crystal","gem",
-    "iron","silver","gold","metal","orange","coal","salt","clay","brick","dusty",
-    "silent","still","calm","cold","hard","solid","heavy","quiet","deep","rough",
-    "wild","lonely","ancient","broken","gray","brown","smooth","soft","sharp","flat"
-    ]
-  private words_enemy = [
-    "fire","flame","smoke","ash","ember","fang","claw","wing","scale","tail",
-    "wolf","bear","fox","hawk","snake","rat","crow","bat","boar","owl",
-    "ghost","spirit","shade","shadow","demon","devil","beast","ogre","goblin","witch",
-    "wizard","soldier","hunter","bandit","pirate","ninja","robot","drone","guard","sniper",
-    "viper","wasp","bee","ant","spider","scorpion","hound","lion","tiger","dragon",
-    "rage","anger","hate","fear","pain","death","skull","bone","blood","fangs",
-    "sword","blade","arrow","gun","bomb","laser","missile","tank","snare","trap",
-    "storm","thunder","lightning","spark","blast","toxic","acid","venom","dark","evil",
-    "hot","mad","wild","fast","swift","fierce","cruel","sharp","dead","furious",
-    "iron","steel","mech","void","warp","curse","doom","burn","bite","crash"
-    ]
+  private gameOver = false;
 
   constructor(){
     super("EscapeScene01");
@@ -96,6 +73,8 @@ export class EscapeScene01 extends Phaser.Scene {
 
     this.create_rocks();
 
+    this.create_points();
+
     this.create_boss();
 
     const controller = new PlayerController(this, this.friendly); // implements SemanticExecutor
@@ -116,29 +95,6 @@ export class EscapeScene01 extends Phaser.Scene {
     }
   }
 
-  public listen(lower=""){
-          this.enemies.children.each((enemyGO: Phaser.GameObjects.GameObject) => {
-            const enemy = enemyGO as Enemy;
-            const name = enemy.displayName.toLowerCase();
-            if (lower.includes(name)) {
-              // Align visible facing to aim
-              this.friendly.faceToward(enemy.x, enemy.y);
-              // Fire strictly using character's direction so graphics and bullet match
-              this.friendly.shootSpread(this.friendly.direction, 5, 30, {
-                speed: 400, radius: 8, lifespanMs: 1000, armDelayMs: 300,
-              });
-            }
-          });
-
-          this.rocks.children.each((obj: Phaser.GameObjects.GameObject) => {
-            const rock = obj as Rock;
-            const rockName = (rock.getData("name") as string).toLowerCase();
-            if (lower.includes(rockName)) {
-              logger.cmd(`Voice detected rock "${rockName}"`);
-              this.friendly.moveToRock(rock);
-            }
-          });
-  }
   // === LoS / FOV / Range ===
   private hasLineOfSight(ax: number, ay: number, bx: number, by: number): boolean {
     const ray = new Phaser.Geom.Line(ax, ay, bx, by);
@@ -277,7 +233,7 @@ export class EscapeScene01 extends Phaser.Scene {
   }
   private create_boss(){
     // === Boss ===
-    const bossName = this.getUniqueWord(this.words_enemy);
+    const bossName = this.getUniqueWord(WORDS_ENEMY);
     this.boss = new Boss(this, Setting.WORLD.W * 0.5, 300, bossName, 30);
     this.enemies.add(this.boss);
 
@@ -308,7 +264,6 @@ export class EscapeScene01 extends Phaser.Scene {
     });
   }
   private create_rocks(){
-    // === Rocks ===
     this.rocks = this.add.group({ runChildUpdate: true }); 
 
     const ROCK_COUNT = 24;
@@ -321,7 +276,7 @@ export class EscapeScene01 extends Phaser.Scene {
 
     const placeRock = (rx: number, ry: number, rw: number, rh: number) => {
 
-      const name = this.getUniqueWord(this.words_rock);
+      const name = this.getUniqueWord(WORDS_ROCK);
       const rock = new Rock(this, rx, ry, rw, rh, name,3);
       this.rocks.add(rock);
 
@@ -349,13 +304,55 @@ export class EscapeScene01 extends Phaser.Scene {
     }
   }
 
+  private create_points() {
+    this.points = this.add.group({ runChildUpdate: true }); 
+
+    const POINT_COUNT = 24;
+    const MIN_W = 24, MAX_W = 96; 
+    const MIN_H = 24, MAX_H = 96;
+    const SAFE_RADIUS = 140;
+
+    const friendlySpawn = new Phaser.Math.Vector2(this.friendly.x, this.friendly.y);
+    const placed: Phaser.Geom.Rectangle[] = [];
+
+    const placePoint = (rx: number, ry: number, rw: number, rh: number) => {
+
+      const name = this.getUniqueWord(WORDS_POINT);
+      const point = new Point(this, rx, ry, rw, rh, name,3);
+      this.points.add(point);
+
+      placed.push(new Phaser.Geom.Rectangle(rx - rw / 2, ry - rh / 2, rw, rh));
+    };
+    // Random Position Loop
+    for (let i = 0; i < POINT_COUNT; i++) {
+      let tries = 0;
+      while (tries++ < 25) {
+        const rw = Phaser.Math.Between(MIN_W, MAX_W);
+        const rh = Phaser.Math.Between(MIN_H, MAX_H);
+        const rx = Phaser.Math.Between(60 + rw/2, Setting.WORLD.W - 60 - rw/2);
+        const ry = Phaser.Math.Between(200 + rh/2, Setting.WORLD.Max_H - 200 - rh/2);
+
+        if (friendlySpawn.distance(new Phaser.Math.Vector2(rx, ry)) < SAFE_RADIUS) continue;
+
+        const cand = new Phaser.Geom.Rectangle(rx - rw/2, ry - rh/2, rw, rh);
+        const is_overlaps = placed.some(r => Phaser.Geom.Rectangle.Overlaps(r, cand));
+        if (is_overlaps) continue;
+
+        placePoint(rx, ry, rw, rh);
+
+        break;
+      }
+    }
+  }
+
+
   private create_enemies(){
     this.enemies = this.physics.add.group({ classType: Chaser, runChildUpdate: true });
-    const ENEMY_COUNT = 6;
+    const ENEMY_COUNT = 2;
     for (let i = 0; i < ENEMY_COUNT; i++) {
       const randX = Phaser.Math.Between(100, Setting.WORLD.W - 100);
       const randY = Phaser.Math.Between(500, Setting.WORLD.Max_H - 200);
-      const t = new Chaser(this, randX, randY, this.getUniqueWord(this.words_enemy), {
+      const t = new Chaser(this, randX, randY, this.getUniqueWord(WORDS_ENEMY), {
         speed: 120,
         dashEveryMs: 0,
         dashSpeed: 260,
@@ -433,11 +430,43 @@ export class EscapeScene01 extends Phaser.Scene {
     });
     return found;
   }
-
+  
   public triggerGameResults(reason: "defeated" | "timeout" | "fell") {
     const timeMs = this.time.now - this.startedAtMs;
     const score = 0;
     this.sound.stopAll();
-    this.scene.start("GameResultsScene", { reason, score, timeMs });
+    this.scene.start("GameResultsScene", { reason, score, timeMs, retryScene: "EscapeScene01" });
   }
+
+  public listPointNames(): string[] {
+    if (this.gameOver) return [];
+    const g = this.points as Phaser.Physics.Arcade.Group | undefined;
+    if (!g || typeof g.getChildren !== "function") return [];
+    const arr = g.getChildren() as any[];           // Array-like
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .map((p: any) => p?.displayName ?? p?.getData?.("name") ?? "")
+      .filter((s: string) => !!s);
+  }
+
+  // public findPointByName(name: string) {
+  //   if (!name) return null;
+  //   const lower = name.toLowerCase();
+  //   return this.points?.getChildren().find((p:any) => {
+  //     const label = (p?.getData?.("name") ?? p?.displayName ?? "").toLowerCase();
+  //     return label === lower;
+  //   }) ?? null;
+  // }
+
+
+  public findPointByName(name: string) {
+    if (!name || this.gameOver) return null;
+    const g = this.points as Phaser.Physics.Arcade.Group | undefined;
+    if (!g || typeof g.getChildren !== "function") return null;
+    const arr = g.getChildren() as any[];
+    if (!Array.isArray(arr)) return null;
+    const lower = name.toLowerCase();
+    return arr.find(p => ((p?.displayName ?? p?.getData?.("name") ?? "") as string).toLowerCase() === lower) ?? null;
+  }
+
 }

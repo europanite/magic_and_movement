@@ -94,18 +94,26 @@ export class Chaser extends Character {
 
   /** Very small avoidance: push perpendicular when overlapping a block. */
   private avoidIfNeeded() {
-    if (!this.obstacles) return;
+    // 旧: if (!this.obstacles) return;
+    const g = this.obstacles as Phaser.Physics.Arcade.StaticGroup | undefined;
+
+    // リトライ直後などで group が破棄済みのケースを弾く
+    if (!g) return;
+    // children セットが生きていないと overlap 内部で entries に触れて落ちる
+    const anyChildren: any = (g as any).children;
+    if (!anyChildren || !Array.isArray(anyChildren.entries)) return;
+    // まれに Scene 側の参照が切れているケースに備える
+    if (!g.scene || !this.scene || g.scene !== this.scene) return;
 
     const body = this.body as Phaser.Physics.Arcade.Body;
     let bumped = false;
-    this.scene.physics.overlap(this, this.obstacles, () => {
+    this.scene.physics.overlap(this, g, () => {
       bumped = true;
     });
 
     if (bumped) {
       const vx = body.velocity.x;
       const vy = body.velocity.y;
-      // Perpendicular nudge
       body.setVelocity(vy * 0.7, -vx * 0.7);
     }
   }
@@ -157,5 +165,11 @@ export class Chaser extends Character {
 
     // Cheap avoidance (optional)
     this.avoidIfNeeded();
+  }
+
+  public override destroy(fromScene?: boolean) {
+    this.target = undefined;
+    this.obstacles = undefined;
+    super.destroy(fromScene);
   }
 }

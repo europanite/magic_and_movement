@@ -67,8 +67,22 @@ export class Character extends Base {
     maxHp = 1,
     opts: CharacterOptions = {}
   ) {
-    super(scene, x, y, texture, frame, displayName, maxHp, opts);
-    if (opts?.sounds) this.sounds = { ...this.sounds, ...opts.sounds };
+    super(
+      scene, 
+      x, 
+      y, 
+      texture, 
+      frame, 
+      displayName, 
+      maxHp, 
+      opts
+    );
+    if (opts?.sounds) this.sounds = { 
+      ...this.sounds, 
+      ...opts.sounds,
+      labelDepth: 40
+    };
+    this.setDepth(30);
   }
 
   /** Weapons */

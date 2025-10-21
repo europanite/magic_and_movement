@@ -48,6 +48,10 @@ export class CommandParser {
     const raw = text.trim().toLowerCase();
     if (!raw) return;
 
+    // --- Point name ("point alpha", "alpha")
+    const point = this.findPointName(raw);
+    if (point) { this.exec.exec({ type: "MOVE_TO_POINT", name: point }); return; }
+
     // --- Enemy name ("attack goblin", "goblin")
     const enemy = this.findEnemyName(raw);
     if (enemy) { this.exec.exec({ type: "ATTACK_ENEMY", name: enemy }); return; }
@@ -134,4 +138,15 @@ export class CommandParser {
     const m = raw.match(/\b(enemy|target)\s+([a-z0-9_-]+)\b/);
     return m ? m[2] : null;
   }
+
+  private findPointName(raw: string): string | null {
+    const list = (this.exec as any).listPointNames?.() as string[] ?? [];
+    for (const name of list) {
+      const n = name.toLowerCase();
+      if (raw === n || raw.includes(n)) return name;
+    }
+    const m = raw.match(/\bpoint\s+([a-z0-9_-]+)\b/);
+    return m ? m[1] : null;
+  }
+
 }

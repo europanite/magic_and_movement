@@ -8,4 +8,5 @@ export class Enemy extends Character {
     });
     this.setData("kind", "enemy");
   }
+  
 }

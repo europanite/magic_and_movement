@@ -7,7 +7,8 @@ export class Friendly extends Character {
   public direction: number = 90;
   private moveTarget: Phaser.Math.Vector2 | null = null;
   private targetRock: Rock | null = null;
-  private moveSpeed = 180;
+  private targetPoint: Rock | null = null;
+  private speed = 200;
   private facing: "right" | "left" | "forward" | "back" = "forward";
   private interrupted = false;
   private clampEnabled = false;
@@ -22,19 +23,23 @@ export class Friendly extends Character {
     forward:    { idle: 9, walk: [9, 10, 11] },
   };
 
-
-
   constructor(scene: Phaser.Scene, x: number, y: number, name = "you", maxHp = 5) {
-    super(scene, x, y, "friendly", 0, name, maxHp, {
-      sounds: { death: "se_friendly_die" },
-      collideWorldBounds: true,
-    });
+    super(
+      scene, 
+      x, 
+      y, 
+      "friendly",
+      0, 
+      name, 
+      maxHp, 
+      {
+        sounds: { death: "se_friendly_die" },
+        collideWorldBounds: true,
+      }
+    );
 
     // animation
-    this.makeWalkAnim("walk-back",    this.FRAMES.back.walk);
-    this.makeWalkAnim("walk-left",    this.FRAMES.left.walk);
-    this.makeWalkAnim("walk-right",   this.FRAMES.right.walk);
-    this.makeWalkAnim("walk-forward", this.FRAMES.forward.walk);
+    this.ensureAnims(this.scene);
 
     this.setData("kind", "friendly");
 
@@ -74,6 +79,7 @@ export class Friendly extends Character {
 
   /** Begin auto-navigation toward the rock center. */
   moveToRock(target: Rock) {
+    this.speed=400;
     const body = this.body as Phaser.Physics.Arcade.Body;
     this.moveTarget = new Phaser.Math.Vector2(target.x, target.y);
     this.targetRock = target;
@@ -87,21 +93,39 @@ export class Friendly extends Character {
     logger.info(`Move: heading to rock "${String(label)}"`);
   }
 
+  moveToPoint(target: Point) {
+    this.speed=400;
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    this.moveTarget = new Phaser.Math.Vector2(target.x, target.y);
+    this.targetPoint = target;
+
+    // Keep collisions enabled while auto-moving.
+    if (body) {
+      body.checkCollision.none = false;
+    }
+
+    const label = target.getData("name") ?? target.displayName ?? "point";
+    logger.info(`Move: heading to point "${String(label)}"`);
+  }
+
   /** Scene can read which rock we are targeting. */
   public getTargetRock(): Rock | null {
     return this.targetRock;
   }
 
   private playWalkAnim() {
+    if (!this.active || !(this as any).anims) return;
+
     const key = {
       right:   "walk-right",
       left:    "walk-left",
       forward: "walk-forward",
       back:    "walk-back",
     }[this.facing];
-    if (this.anims.currentAnim?.key !== key) {
-      this.anims.play(key, true);
-    }
+
+    const anims = (this as any).anims as Phaser.Animations.AnimationState | undefined;
+    if (!anims) return;
+    if (anims.currentAnim?.key !== key) anims.play(key, true);
   }
 
   public isAutoMoving(): boolean {
@@ -132,8 +156,21 @@ export class Friendly extends Character {
 
       // --- Velocity & animation
       const angle = Math.atan2(dy, dx);
-      this.scene.physics.velocityFromRotation(angle, this.moveSpeed, body.velocity);
+      this.scene.physics.velocityFromRotation(angle, this.speed, body.velocity);
       this.playWalkAnim();
+
+      if (this.moveTarget && !this.targetRock) {
+        const dx = this.moveTarget.x - this.x;
+        const dy = this.moveTarget.y - this.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= 6) { // しきい値はお好みで
+          const body = this.body as Phaser.Physics.Arcade.Body;
+          body?.setVelocity(0, 0);
+          this.setPosition(this.moveTarget.x, this.moveTarget.y);
+          this.stopAutoMove();
+          (this as any).playIdleFromDirection?.();
+        }
+      }
 
       // NOTE:
       // Do NOT stop in here. Stopping is now exclusively handled by the scene-side collider.
@@ -273,4 +310,21 @@ export class Friendly extends Character {
             });
           }
   }
+  private ensureAnims(scene: Phaser.Scene) {
+    const A = scene.anims;
+    const mk = (key: string, frames: number[]) => {
+      if (A.exists(key)) return;
+      A.create({
+        key,
+        frames: frames.map(f => ({ key: "friendly", frame: f })),
+        frameRate: 8,
+        repeat: -1,
+      });
+    };
+    mk("walk-back",    [0,1,2]);
+    mk("walk-left",    [3,4,5]);
+    mk("walk-right",   [6,7,8]);
+    mk("walk-forward", [9,10,11]);
+  }
+
 }

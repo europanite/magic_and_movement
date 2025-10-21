@@ -54,6 +54,46 @@ export const Setting = {
     bgmVolume: 0.5,
     sfxVolume: 0.6,
   },
+
+  DEPTH: {
+    POINT:  10,
+    CHARACTER: 20,
+    LABEL: 100,
+  },
 } as const;
 
 export type SettingType = typeof Setting;
+
+export const WORDS_POINT: string[] = [
+  "alpha","bravo","charlie","delta","echo","foxtrot","golf","hotel","india","juliet",
+  "kilo","lima","mike","november","oscar","papa","quebec","romeo","sierra","tango",
+  "uniform","victor","whiskey","xray","yankee","zulu",
+  "amber","ash","aurora","blaze","cedar","cobalt","comet","coral","copper","ember",
+  "falcon","fern","glacier","granite","ivy","jasper","maple","neon","olive",
+  "onyx","orchid","quartz","raven","willow"
+];
+export const WORDS_ROCK: string[] = [
+    "rock","stone","hill","cliff","sand","dust","mud","cave","valley","island",
+    "shore","beach","wave","shell","pebble","boulder","mountain","forest","tree","leaf",
+    "root","branch","grass","moss","vine","river","stream","lake","pond","water",
+    "ice","snow","frost","storm","cloud","wind","breeze","rain","drop","mist",
+    "shadow","light","sun","moon","star","sky","dawn","night","day","twilight",
+    "earth","soil","field","plain","plate","ridge","path","trail","step","road",
+    "wall","gate","bridge","pillar","arch","ring","circle","cube","crystal","gem",
+    "iron","silver","gold","metal","orange","coal","salt","clay","brick","dusty",
+    "silent","still","calm","cold","hard","solid","heavy","quiet","deep","rough",
+    "wild","lonely","ancient","broken","gray","brown","smooth","soft","sharp","flat"
+];
+
+export const WORDS_ENEMY: string[] = [
+    "fire","flame","smoke","ash","ember","fang","claw","wing","scale","tail",
+    "wolf","bear","fox","hawk","snake","rat","crow","bat","boar","owl",
+    "ghost","spirit","shade","shadow","demon","devil","beast","ogre","goblin","witch",
+    "wizard","soldier","hunter","bandit","pirate","ninja","robot","drone","guard","sniper",
+    "viper","wasp","bee","ant","spider","scorpion","hound","lion","tiger","dragon",
+    "rage","anger","hate","fear","pain","death","skull","bone","blood","fangs",
+    "sword","blade","arrow","gun","bomb","laser","missile","tank","snare","trap",
+    "storm","thunder","lightning","spark","blast","toxic","acid","venom","dark","evil",
+    "hot","mad","wild","fast","swift","fierce","cruel","sharp","dead","furious",
+    "iron","steel","mech","void","warp","curse","doom","burn","bite","crash"
+];
