@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { logger } from "../logger";
 import { Rock } from "../entities/Rock";
-import { Enemy } from "../entities/Enemy";
+import { Chaser } from "../entities/Chaser";
 import { Boss } from "../entities/Boss";
 import { Friendly } from "../entities/Friendly";
 import { Bullet } from '../entities/Bullet';
@@ -269,6 +269,11 @@ export class EscapeScene01 extends Phaser.Scene {
       logger.cmd(`Friendly Hit`)
       b.takeDamage(1);
     });
+
+    this.physics.add.overlap(this.friendlies, this.enemies, (_fGO, _eGO) => {
+      this.triggerGameResults("defeated");
+    });
+
   }
   private create_boss(){
     // === Boss ===
@@ -343,46 +348,25 @@ export class EscapeScene01 extends Phaser.Scene {
       }
     }
   }
+
   private create_enemies(){
-    // Enemy
-    this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
+    this.enemies = this.physics.add.group({ classType: Chaser, runChildUpdate: true });
     const ENEMY_COUNT = 6;
     for (let i = 0; i < ENEMY_COUNT; i++) {
       const randX = Phaser.Math.Between(100, Setting.WORLD.W - 100);
       const randY = Phaser.Math.Between(500, Setting.WORLD.Max_H - 200);
-      const e = new Enemy(this, randX, randY, this.getUniqueWord(this.words_enemy));
-      this.enemies.add(e);
+      const t = new Chaser(this, randX, randY, this.getUniqueWord(this.words_enemy), {
+        speed: 120,
+        dashEveryMs: 0,
+        dashSpeed: 260,
+        hitboxScale: 0.45,
+        scale: 1.8,
+        snapVelocity: true,
+      });
+      t.setTarget(this.friendly);
+      t.setObstacles(this.rocks);
+      this.enemies.add(t);
     }
-    // === Enemy Attack ===
-    this.time.addEvent({
-      delay: 2000,
-      loop: true,
-      callback: () => {
-        if (!this.friendly?.active) return;
-
-        this.enemies.children.each((enemyGO: Phaser.GameObjects.GameObject) => {
-          const e = enemyGO as Phaser.Physics.Arcade.Sprite;
-          if (!e.active) return;
-
-          const canSee =
-            this.inFOVAndRange(e.x, e.y, this.friendly.x, this.friendly.y, { fovDeg: 120, range: 700 }) &&
-            this.hasLineOfSight(e.x, e.y, this.friendly.x, this.friendly.y);
-
-          if (!canSee) return;
-
-          // Shoot
-          const ang = Phaser.Math.RadToDeg(
-            Phaser.Math.Angle.Between(e.x, e.y, this.friendly.x, this.friendly.y)
-          );
-          (e as any ).shoot(ang, {
-            speed: 220,
-            radius: 8,
-            lifespanMs: 2000,
-            armDelayMs: 300,
-          });
-        });
-      },
-    });
   }
 
   private create_bullets(){
