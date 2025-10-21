@@ -3,8 +3,8 @@ import { TitleScene } from "./scenes/TitleScene";
 import { MainScene01 } from "./scenes/MainScene01";
 import { OptionScene } from "./scenes/OptionScene";
 import { GameResultsScene } from "./scenes/GameResultsScene";
-import { logger } from "./logger"
 import { EscapeScene01 } from "./scenes/EscapeScene01";
+import { logger } from "./logger"
 
 logger.info("Booting Phaser...");
 
