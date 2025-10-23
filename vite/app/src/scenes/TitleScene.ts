@@ -74,7 +74,7 @@ export class TitleScene extends Phaser.Scene {
       menuY, 
       buttonWidth, 
       buttonHeight, 
-      "▶ Start", () => this.startGame(), 
+      "▶ EscapeScene", () => this.startEscape(), 
       labelSize);
 
     const escapeBtn = this.makeButton(
@@ -82,7 +82,7 @@ export class TitleScene extends Phaser.Scene {
       menuY + 1 * (buttonHeight + spacing),
       buttonWidth,
       buttonHeight,
-      "▶ Start", () => this.startEscape(), 
+      "▶ ShootScene", () => this.startShoot(), 
       labelSize
     );
 
@@ -120,7 +120,7 @@ export class TitleScene extends Phaser.Scene {
     });
   }
 
-  private startGame() {
+  private startShoot() {
     if (this.bgm?.isPlaying) this.bgm.stop();
     this.input.keyboard!.removeAllListeners();
     this.input.removeAllListeners();

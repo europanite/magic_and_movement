@@ -15,14 +15,6 @@ export class Friendly extends Character {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   wasd!: { [k: string]: Phaser.Input.Keyboard.Key };
 
-  // Frame Assignment
-  private FRAMES = {
-    back:  { idle: 0,  walk: [0, 1, 2] },
-    left:  { idle: 3,  walk: [3, 4, 5] },
-    right: { idle: 6,  walk: [6, 7, 8] },
-    forward:    { idle: 9, walk: [9, 10, 11] },
-  };
-
   constructor(scene: Phaser.Scene, x: number, y: number, name = "you", maxHp = 5) {
     super(
       scene, 
@@ -310,21 +302,4 @@ export class Friendly extends Character {
             });
           }
   }
-  private ensureAnims(scene: Phaser.Scene) {
-    const A = scene.anims;
-    const mk = (key: string, frames: number[]) => {
-      if (A.exists(key)) return;
-      A.create({
-        key,
-        frames: frames.map(f => ({ key: "friendly", frame: f })),
-        frameRate: 8,
-        repeat: -1,
-      });
-    };
-    mk("walk-back",    [0,1,2]);
-    mk("walk-left",    [3,4,5]);
-    mk("walk-right",   [6,7,8]);
-    mk("walk-forward", [9,10,11]);
-  }
-
 }
