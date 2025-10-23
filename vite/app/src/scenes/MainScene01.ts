@@ -72,6 +72,13 @@ export class MainScene01 extends Phaser.Scene {
     this.load.audio("se_bullet_collision","audio/bullet_timeout.mp3");
   }
 
+  init() {
+    this.gameOver = false;
+    this.startedAtMs = 0;
+    this.key?.detach?.();
+    this.mic?.stop?.();
+  }
+
   create() {
     this.startedAtMs = this.time.now;
     // log
@@ -407,25 +414,29 @@ export class MainScene01 extends Phaser.Scene {
     this.friendlies.add(this.friendly);
   }
 
+
   /** expose rock names to the command system */
   public listRockNames(): string[] {
-    const out: string[] = [];
-    this.rocks?.children.each((go: Phaser.GameObjects.GameObject) => {
-      const r = go as Rock;
-      const n = (r.getData("name") as string) ?? r.displayName ?? "rock";
-      out.push(String(n).toLowerCase());
-    });
-    return out;
+    if (this.gameOver) return [];
+    const g = this.rocks as Phaser.Physics.Arcade.StaticGroup | undefined;
+    // StaticGroup も getChildren() が使えます
+    const arr = (g && typeof (g as any).getChildren === "function") ? (g as any).getChildren() as any[] : [];
+    return Array.isArray(arr)
+      ? arr.map((r: any) => (r?.getData?.("name") ?? r?.displayName ?? "rock") as string)
+          .map(s => s.toLowerCase())
+      : [];
   }
 
   /** expose enemy names to the command system */
   public listEnemyNames(): string[] {
-    const out: string[] = [];
-    this.enemies?.children.each((go: Phaser.GameObjects.GameObject) => {
-      const e = go as Enemy;
-      out.push(String(e.displayName).toLowerCase());
-    });
-    return out;
+    if (this.gameOver) return [];
+    const g = this.enemies as Phaser.Physics.Arcade.Group | undefined;
+    if (!g || typeof g.getChildren !== "function") return [];
+    const arr = g.getChildren() as any[];
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .map((e: any) => (e?.displayName ?? "").toString().toLowerCase())
+      .filter((s: string) => !!s);
   }
 
   /** find rock by name (case-insensitive) */
@@ -441,20 +452,46 @@ export class MainScene01 extends Phaser.Scene {
   }
 
   /** find enemy by name (case-insensitive) */
-  public findEnemyByName(name: string): Enemy | null {
-    const target = name.toLowerCase();
-    let found: Enemy | null = null;
-    this.enemies?.children.each((go: Phaser.GameObjects.GameObject) => {
-      const e = go as Enemy;
-      if (!found && e.displayName.toLowerCase() === target) found = e;
-    });
-    return found;
+  public findEnemyByName(name: string) {
+    if (!name || this.gameOver) return null;
+    const g = this.enemies as Phaser.Physics.Arcade.Group | undefined;
+    if (!g || typeof g.getChildren !== "function") return null;
+    const arr = g.getChildren() as any[];
+    if (!Array.isArray(arr)) return null;
+    const lower = name.toLowerCase();
+    return arr.find(e => ((e?.displayName ?? "") as string).toLowerCase() === lower) ?? null;
   }
 
   public triggerGameResults(reason: "defeated" | "timeout" | "fell") {
+    if (this.gameOver) return;
+    this.gameOver = true;
+    this.key?.detach();
+    this.mic?.stop?.();
+    this.input.keyboard?.removeAllListeners();
     const timeMs = this.time.now - this.startedAtMs;
     const score = 0;
     this.sound.stopAll();
-    this.scene.start("GameResultsScene", { reason, score, timeMs, retryScene: "MainScene01" });
+    this.scene.start("GameResultsScene", { reason, score, timeMs, retryScene: "EscapeScene01" });
+  }
+
+  public listPointNames(): string[] {
+    if (this.gameOver) return [];
+    const g = this.points as Phaser.Physics.Arcade.Group | undefined;
+    if (!g || typeof g.getChildren !== "function") return [];
+    const arr = g.getChildren() as any[];
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .map((p: any) => p?.displayName ?? p?.getData?.("name") ?? "")
+      .filter((s: string) => !!s);
+  }
+
+  public findPointByName(name: string) {
+    if (!name || this.gameOver) return null;
+    const g = this.points as Phaser.Physics.Arcade.Group | undefined;
+    if (!g || typeof g.getChildren !== "function") return null;
+    const arr = g.getChildren() as any[];
+    if (!Array.isArray(arr)) return null;
+    const lower = name.toLowerCase();
+    return arr.find(p => ((p?.displayName ?? p?.getData?.("name") ?? "") as string).toLowerCase() === lower) ?? null;
   }
 }

@@ -75,14 +75,14 @@ etc
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
-- Docker & Docker Compose
-- Expo Go app (for Android/iOS testing)
+- [Docker Compose](https://docs.docker.com/compose/)
+- [Expo](https://expo.dev/)　and [Expo Go](https://expo.dev/go) (for Android/iOS testing)　
 
 ### 2. Build and start all services:
 
 ```bash
 # set environment variables:
-export REACT_NATIVE_PACKAGER_HOSTNAME=${YOUR_HOST}
+export REACT_NATIVE_PACKAGER_HOSTNAME=192.168.3.6
 
 # Build the image
 docker compose build

@@ -2,7 +2,6 @@ import Phaser from "phaser";
 import { logger } from "../logger";
 import { Rock } from "../entities/Rock";
 import { Chaser } from "../entities/Chaser";
-import { Boss } from "../entities/Boss";
 import { Friendly } from "../entities/Friendly";
 import { Bullet } from '../entities/Bullet';
 import { SoundManager } from "../audio/SoundManager";
@@ -16,7 +15,6 @@ import { Point } from "../entities/Point";
 export class EscapeScene01 extends Phaser.Scene {
   private friendly!: Friendly;
   private friendlies!: Phaser.Physics.Arcade.Group;
-  private boss!: Boss;
   private bullets!: Phaser.Physics.Arcade.Group; 
   private enemies!:    Phaser.Physics.Arcade.Group;
   private startedAtMs = 0;
@@ -37,15 +35,20 @@ export class EscapeScene01 extends Phaser.Scene {
   preload() {
     this.load.spritesheet('friendly', 'images/witch_sheet.png', {frameWidth: Setting.SPRITE.FRAME_W,frameHeight: Setting.SPRITE.FRAME_H,},);
     this.load.spritesheet('enemy', 'images/enemy_sheet.png', {frameWidth: Setting.SPRITE.FRAME_W,frameHeight: Setting.SPRITE.FRAME_H,},);
-    this.load.spritesheet('boss', 'images/enemy_sheet.png', {frameWidth: Setting.SPRITE.FRAME_W,frameHeight: Setting.SPRITE.FRAME_H,});
     this.load.image("bullet", "images/bullet.png");
     this.load.audio("bgm_main", "audio/bgm.mp3");
     this.load.audio("se_friendly_die", "audio/character_destroy.mp3");
     this.load.audio("se_enemy_die",  "audio/character_destroy.mp3");
-    this.load.audio("se_boss_die",   "audio/character_destroy.mp3");
     this.load.audio("se_bullet_fire",     "audio/bullet_timeout.mp3");
     this.load.audio("se_bullet_timeout",  "audio/bullet_timeout.mp3");
     this.load.audio("se_bullet_collision","audio/bullet_timeout.mp3");
+  }
+
+  init() {
+    this.gameOver = false;
+    this.startedAtMs = 0;
+    this.key?.detach?.();
+    this.mic?.stop?.();
   }
 
   create() {
@@ -74,8 +77,6 @@ export class EscapeScene01 extends Phaser.Scene {
     this.create_rocks();
 
     this.create_points();
-
-    this.create_boss();
 
     const controller = new PlayerController(this, this.friendly); // implements SemanticExecutor
     this.parser = new CommandParser(controller);
@@ -229,40 +230,8 @@ export class EscapeScene01 extends Phaser.Scene {
     this.physics.add.overlap(this.friendlies, this.enemies, (_fGO, _eGO) => {
       this.triggerGameResults("defeated");
     });
-
   }
-  private create_boss(){
-    // === Boss ===
-    const bossName = this.getUniqueWord(WORDS_ENEMY);
-    this.boss = new Boss(this, Setting.WORLD.W * 0.5, 300, bossName, 30);
-    this.enemies.add(this.boss);
 
-    // === Boss atack ===
-    this.time.addEvent({
-      delay: 1500,
-      loop: true,
-      callback: () => {
-        if (!this.boss?.active) return;
-
-      // visibility
-      const canSee =
-        this.inFOVAndRange(this.boss.x, this.boss.y, this.friendly.x, this.friendly.y, { fovDeg: 120, range: 700 }) &&
-        this.hasLineOfSight(this.boss.x, this.boss.y, this.friendly.x, this.friendly.y);
-
-      if (!canSee) return;
-        const angle = Phaser.Math.RadToDeg(
-          Phaser.Math.Angle.Between(this.boss.x, this.boss.y,  this.friendly.x,  this.friendly.y)
-        );
-        this.boss.shootSpread(angle, 5, 30, {
-                speed: 400,
-                radius: 8,
-                lifespanMs: 1000,
-                armDelayMs: 300,
-        });
-        this.boss.setWeapon({ armDelayMs: 500 });
-      },
-    });
-  }
   private create_rocks(){
     this.rocks = this.add.group({ runChildUpdate: true }); 
 
@@ -348,12 +317,12 @@ export class EscapeScene01 extends Phaser.Scene {
 
   private create_enemies(){
     this.enemies = this.physics.add.group({ classType: Chaser, runChildUpdate: true });
-    const ENEMY_COUNT = 2;
+    const ENEMY_COUNT = 1;
     for (let i = 0; i < ENEMY_COUNT; i++) {
       const randX = Phaser.Math.Between(100, Setting.WORLD.W - 100);
       const randY = Phaser.Math.Between(500, Setting.WORLD.Max_H - 200);
       const t = new Chaser(this, randX, randY, this.getUniqueWord(WORDS_ENEMY), {
-        speed: 120,
+        speed: 80,
         dashEveryMs: 0,
         dashSpeed: 260,
         hitboxScale: 0.45,
@@ -389,23 +358,26 @@ export class EscapeScene01 extends Phaser.Scene {
 
   /** expose rock names to the command system */
   public listRockNames(): string[] {
-    const out: string[] = [];
-    this.rocks?.children.each((go: Phaser.GameObjects.GameObject) => {
-      const r = go as Rock;
-      const n = (r.getData("name") as string) ?? r.displayName ?? "rock";
-      out.push(String(n).toLowerCase());
-    });
-    return out;
+    if (this.gameOver) return [];
+    const g = this.rocks as Phaser.Physics.Arcade.StaticGroup | undefined;
+    // StaticGroup も getChildren() が使えます
+    const arr = (g && typeof (g as any).getChildren === "function") ? (g as any).getChildren() as any[] : [];
+    return Array.isArray(arr)
+      ? arr.map((r: any) => (r?.getData?.("name") ?? r?.displayName ?? "rock") as string)
+          .map(s => s.toLowerCase())
+      : [];
   }
 
   /** expose enemy names to the command system */
   public listEnemyNames(): string[] {
-    const out: string[] = [];
-    this.enemies?.children.each((go: Phaser.GameObjects.GameObject) => {
-      const e = go as Enemy;
-      out.push(String(e.displayName).toLowerCase());
-    });
-    return out;
+    if (this.gameOver) return [];
+    const g = this.enemies as Phaser.Physics.Arcade.Group | undefined;
+    if (!g || typeof g.getChildren !== "function") return [];
+    const arr = g.getChildren() as any[];
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .map((e: any) => (e?.displayName ?? "").toString().toLowerCase())
+      .filter((s: string) => !!s);
   }
 
   /** find rock by name (case-insensitive) */
@@ -421,17 +393,22 @@ export class EscapeScene01 extends Phaser.Scene {
   }
 
   /** find enemy by name (case-insensitive) */
-  public findEnemyByName(name: string): Enemy | null {
-    const target = name.toLowerCase();
-    let found: Enemy | null = null;
-    this.enemies?.children.each((go: Phaser.GameObjects.GameObject) => {
-      const e = go as Enemy;
-      if (!found && e.displayName.toLowerCase() === target) found = e;
-    });
-    return found;
+  public findEnemyByName(name: string) {
+    if (!name || this.gameOver) return null;
+    const g = this.enemies as Phaser.Physics.Arcade.Group | undefined;
+    if (!g || typeof g.getChildren !== "function") return null;
+    const arr = g.getChildren() as any[];
+    if (!Array.isArray(arr)) return null;
+    const lower = name.toLowerCase();
+    return arr.find(e => ((e?.displayName ?? "") as string).toLowerCase() === lower) ?? null;
   }
-  
+
   public triggerGameResults(reason: "defeated" | "timeout" | "fell") {
+    if (this.gameOver) return;
+    this.gameOver = true;
+    this.key?.detach();
+    this.mic?.stop?.();
+    this.input.keyboard?.removeAllListeners();
     const timeMs = this.time.now - this.startedAtMs;
     const score = 0;
     this.sound.stopAll();
@@ -442,22 +419,12 @@ export class EscapeScene01 extends Phaser.Scene {
     if (this.gameOver) return [];
     const g = this.points as Phaser.Physics.Arcade.Group | undefined;
     if (!g || typeof g.getChildren !== "function") return [];
-    const arr = g.getChildren() as any[];           // Array-like
+    const arr = g.getChildren() as any[];
     if (!Array.isArray(arr)) return [];
     return arr
       .map((p: any) => p?.displayName ?? p?.getData?.("name") ?? "")
       .filter((s: string) => !!s);
   }
-
-  // public findPointByName(name: string) {
-  //   if (!name) return null;
-  //   const lower = name.toLowerCase();
-  //   return this.points?.getChildren().find((p:any) => {
-  //     const label = (p?.getData?.("name") ?? p?.displayName ?? "").toLowerCase();
-  //     return label === lower;
-  //   }) ?? null;
-  // }
-
 
   public findPointByName(name: string) {
     if (!name || this.gameOver) return null;
@@ -468,5 +435,4 @@ export class EscapeScene01 extends Phaser.Scene {
     const lower = name.toLowerCase();
     return arr.find(p => ((p?.displayName ?? p?.getData?.("name") ?? "") as string).toLowerCase() === lower) ?? null;
   }
-
 }

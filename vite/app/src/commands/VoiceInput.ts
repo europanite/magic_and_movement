@@ -36,4 +36,12 @@ export class VoiceInput {
       }
     });
   }
+  stop() {
+    if (this.active) {
+      this.rec.stop();
+      this.active = false;
+      const status = document.getElementById("micStatus") as HTMLSpanElement | null;
+      status && (status.textContent = "mic: stopped");
+    }
+  }
 }

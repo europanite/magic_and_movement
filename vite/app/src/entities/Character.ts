@@ -209,4 +209,21 @@ export class Character extends Base {
   public rock(){}
   public lock(){}
   public barrage(){}
+
+  public ensureAnims(scene: Phaser.Scene) {
+    const A = scene.anims;
+    const mk = (key: string, frames: number[]) => {
+      if (A.exists(key)) return;
+      A.create({
+        key,
+        frames: frames.map(f => ({ key: "friendly", frame: f })),
+        frameRate: 8,
+        repeat: -1,
+      });
+    };
+    mk("walk-back",    [0,1,2]);
+    mk("walk-left",    [3,4,5]);
+    mk("walk-right",   [6,7,8]);
+    mk("walk-forward", [9,10,11]);
+  }
 }
