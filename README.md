@@ -2,11 +2,12 @@
 
 [![Deploy Vite to GitHub Pages](https://github.com/europanite/magic_and_movement/actions/workflows/pages.yml/badge.svg)](https://github.com/europanite/magic_and_movement/actions/workflows/pages.yml)
 
-Speak commands to control your character.
+Speak commands and control your character.
 
-One magical girl shoots enemies and advance through a world.
+One magical girl escapes from chasers.
+
+<!-- One magical girl shoots enemies and advance through a world. -->
 <!-- Two magical girls take turns suppressing enemies as they advance through a world. -->
-<!-- The gameplay model is based on Fire and Movement.  -->
 
 ## Commands
 | command | description | implement |
