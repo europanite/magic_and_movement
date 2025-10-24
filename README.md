@@ -2,8 +2,8 @@
 
 [![Deploy Vite to GitHub Pages](https://github.com/europanite/magic_and_movement/actions/workflows/pages.yml/badge.svg)](https://github.com/europanite/magic_and_movement/actions/workflows/pages.yml)
 
-## DEMO
-https://europanite.github.io/magic_and_movement/
+## [DEMO](https://europanite.github.io/magic_and_movement/)
+Please note that this demo includes audio. Use earphones/a headset and enable your microphone.
 
 Speak commands and control your character.
 
