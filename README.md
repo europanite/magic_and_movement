@@ -2,6 +2,9 @@
 
 [![Deploy Vite to GitHub Pages](https://github.com/europanite/magic_and_movement/actions/workflows/pages.yml/badge.svg)](https://github.com/europanite/magic_and_movement/actions/workflows/pages.yml)
 
+## DEMO
+https://europanite.github.io/magic_and_movement/
+
 Speak commands and control your character.
 
 One magical girl escapes from chasers.
